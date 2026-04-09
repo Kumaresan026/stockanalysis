@@ -1,0 +1,477 @@
+{% extends 'stocks/base.html' %}
+
+{% block title %}{{ stock.name }} ({{ stock.symbol }}){% endblock %}
+
+{% block extra_css %}
+<style>
+.term-badge { cursor: help; border-bottom: 1px dashed #6c757d; }
+.metric-card { transition: transform 0.2s; }
+.metric-card:hover { transform: translateY(-2px); }
+.beginner-tip { background: rgba(13,202,240,0.08); border-left: 3px solid #0dcaf0; }
+.signal-up { color: #198754; }
+.signal-down { color: #dc3545; }
+.sector-badge { font-size: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+    <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Company Header -->
+<div class="card border-0 mb-4" style="background: linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <span class="badge bg-primary fs-6 px-3 py-2">{{ stock.symbol }}</span>
+                    <span class="badge bg-secondary sector-badge">
+                        <i class="bi bi-building me-1"></i>{{ stock.sector }}
+                    </span>
+                    {% if stock.source == 'demo' %}
+                    <span class="badge bg-warning text-dark sector-badge">
+                        <i class="bi bi-info-circle me-1"></i>Demo Data
+                    </span>
+                    {% endif %}
+                </div>
+                <h1 class="display-5 fw-bold text-white mb-1">{{ stock.name }}</h1>
+                <p class="text-muted mb-2">{{ stock.description }}</p>
+                <small class="text-muted">
+                    <i class="bi bi-clock me-1"></i>Last updated: {{ stock.timestamp }}
+                    &nbsp;|&nbsp;
+                    <i class="bi bi-database me-1"></i>Source: {{ stock.source }}
+                </small>
+            </div>
+            <div class="text-end">
+                <div class="display-4 fw-bold text-white">${{ stock.price|floatformat:2 }}</div>
+                {% if stock.change_percent >= 0 %}
+                <div class="fs-5 text-success fw-semibold">
+                    <i class="bi bi-caret-up-fill"></i>
+                    +{{ stock.change_percent|floatformat:2 }}% today
+                </div>
+                <small class="text-success">+${{ stock.change|floatformat:2 }} from yesterday</small>
+                {% else %}
+                <div class="fs-5 text-danger fw-semibold">
+                    <i class="bi bi-caret-down-fill"></i>
+                    {{ stock.change_percent|floatformat:2 }}% today
+                </div>
+                <small class="text-danger">${{ stock.change|floatformat:2 }} from yesterday</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="d-flex gap-2 mt-3 flex-wrap">
+            {% if user.is_authenticated %}
+                {% if in_watchlist %}
+                <a href="{% url 'remove_from_watchlist' stock.symbol %}" class="btn btn-outline-warning">
+                    <i class="bi bi-eye-slash me-1"></i>Remove from Watchlist
+                </a>
+                {% else %}
+                <a href="{% url 'add_to_watchlist' stock.symbol %}" class="btn btn-outline-primary">
+                    <i class="bi bi-eye me-1"></i>Add to Watchlist
+                </a>
+                {% endif %}
+                <a href="{% url 'create_alert' %}?symbol={{ stock.symbol }}" class="btn btn-outline-warning">
+                    <i class="bi bi-bell me-1"></i>Set Price Alert
+                </a>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-person me-1"></i>Login to Track This Stock
+                </a>
+            {% endif %}
+            <a href="{% url 'analytics' %}?symbol={{ stock.symbol }}" class="btn btn-outline-info">
+                <i class="bi bi-bar-chart me-1"></i>View Analytics
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ── What do these numbers mean? (Beginner Guide) ───────────────── -->
+<div class="card bg-dark border-info beginner-tip mb-4">
+    <div class="card-body py-2 px-3">
+        <p class="mb-0 small text-info">
+            <i class="bi bi-lightbulb me-1"></i>
+            <strong>New to stocks?</strong>
+            The <strong>price</strong> is what one share costs right now.
+            A <strong>share</strong> is a tiny piece of ownership in the company.
+            The <strong>% change</strong> shows if the price went up or down today compared to yesterday.
+            <a href="#glossary" class="text-info">See full glossary ↓</a>
+        </p>
+    </div>
+</div>
+
+<!-- ── Key Metrics ──────────────────────────────────────────────── -->
+<h4 class="mb-3"><i class="bi bi-speedometer2 me-2 text-info"></i>Today's Key Numbers</h4>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card bg-dark border-secondary metric-card h-100">
+            <div class="card-body text-center">
+                <span class="term-badge text-muted small" title="The price when the stock market opened this morning (9:30 AM New York time)">
+                    Opening Price <i class="bi bi-question-circle"></i>
+                </span>
+                <div class="fs-4 fw-bold text-white mt-1">${{ stock.open|floatformat:2 }}</div>
+                <small class="text-muted">What it cost this morning</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card bg-dark border-secondary metric-card h-100">
+            <div class="card-body text-center">
+                <span class="term-badge text-muted small" title="The closing price from the previous trading day — used to calculate today's % change">
+                    Yesterday's Close <i class="bi bi-question-circle"></i>
+                </span>
+                <div class="fs-4 fw-bold text-white mt-1">${{ stock.previous_close|floatformat:2 }}</div>
+                <small class="text-muted">Starting point for today</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card bg-dark border-secondary metric-card h-100">
+            <div class="card-body text-center">
+                <span class="term-badge text-muted small" title="The highest price reached during today's trading session">
+                    Day High <i class="bi bi-question-circle"></i>
+                </span>
+                <div class="fs-4 fw-bold text-success mt-1">${{ stock.high|floatformat:2 }}</div>
+                <small class="text-muted">Best price of the day</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card bg-dark border-secondary metric-card h-100">
+            <div class="card-body text-center">
+                <span class="term-badge text-muted small" title="The lowest price reached during today's trading session">
+                    Day Low <i class="bi bi-question-circle"></i>
+                </span>
+                <div class="fs-4 fw-bold text-danger mt-1">${{ stock.low|floatformat:2 }}</div>
+                <small class="text-muted">Cheapest price of the day</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Volume -->
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-bar-chart-fill fs-2 text-primary"></i>
+        <div>
+            <div class="text-muted small">
+                <span class="term-badge" title="Volume = how many shares were bought and sold today. High volume means lots of people are interested.">
+                    Trading Volume <i class="bi bi-question-circle"></i>
+                </span>
+            </div>
+            <div class="fs-4 fw-bold text-white">{{ stock.volume|floatformat:0 }} shares</div>
+            <small class="text-muted">Number of shares traded hands today</small>
+        </div>
+    </div>
+</div>
+
+<!-- ── Price History Chart ─────────────────────────────────────── -->
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-header bg-transparent border-secondary d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">
+            <i class="bi bi-graph-up me-2 text-primary"></i>
+            Price History — Last 90 Days
+        </h5>
+        <span class="badge bg-secondary">
+            <i class="bi bi-calendar me-1"></i>3-month view
+        </span>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1 text-info"></i>
+            This chart shows how the stock price moved over the past 3 months.
+            <strong>Going up = good for shareholders. Going down = price dropped.</strong>
+        </p>
+        <canvas id="priceChart" height="100"></canvas>
+    </div>
+</div>
+
+<!-- ── Technical Indicators ────────────────────────────────────── -->
+{% if indicators %}
+<h4 class="mb-3"><i class="bi bi-activity me-2 text-warning"></i>Technical Indicators
+    <small class="text-muted fs-6 fw-normal">(for advanced analysis)</small>
+</h4>
+<div class="row g-3 mb-4">
+    {% if indicators.sma_20 %}
+    <div class="col-md-4">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">
+                    <span class="term-badge" title="SMA 20 = Simple Moving Average over 20 days. It smooths out daily ups and downs to show the trend. If price > SMA, trend is up.">
+                        20-Day Moving Average <i class="bi bi-question-circle"></i>
+                    </span>
+                </div>
+                <div class="fs-5 fw-bold text-white">${{ indicators.sma_20|floatformat:2 }}</div>
+                {% if stock.price > indicators.sma_20 %}
+                <small class="text-success"><i class="bi bi-check-circle me-1"></i>Current price is ABOVE average → Bullish trend</small>
+                {% else %}
+                <small class="text-danger"><i class="bi bi-x-circle me-1"></i>Current price is BELOW average → Bearish trend</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if indicators.rsi %}
+    <div class="col-md-4">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">
+                    <span class="term-badge" title="RSI = Relative Strength Index (0-100). Above 70 = overbought (might drop). Below 30 = oversold (might rise). Near 50 = neutral.">
+                        RSI — Strength Meter <i class="bi bi-question-circle"></i>
+                    </span>
+                </div>
+                <div class="fs-5 fw-bold
+                    {% if indicators.rsi > 70 %}text-danger
+                    {% elif indicators.rsi < 30 %}text-success
+                    {% else %}text-warning{% endif %}">
+                    {{ indicators.rsi|floatformat:1 }} / 100
+                </div>
+                {% if indicators.rsi > 70 %}
+                <small class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Overbought — may drop soon</small>
+                {% elif indicators.rsi < 30 %}
+                <small class="text-success"><i class="bi bi-emoji-smile me-1"></i>Oversold — may be a buying opportunity</small>
+                {% else %}
+                <small class="text-warning"><i class="bi bi-dash-circle me-1"></i>Neutral — no strong signal</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if indicators.volatility %}
+    <div class="col-md-4">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">
+                    <span class="term-badge" title="Volatility = how much the price swings up and down. High volatility = risky but potentially higher returns. Low volatility = steady and stable.">
+                        Volatility — Risk Level <i class="bi bi-question-circle"></i>
+                    </span>
+                </div>
+                <div class="fs-5 fw-bold text-white">{{ indicators.volatility|floatformat:2 }}%</div>
+                {% if indicators.volatility > 3 %}
+                <small class="text-danger"><i class="bi bi-lightning me-1"></i>High volatility — price swings a lot. Higher risk.</small>
+                {% elif indicators.volatility > 1.5 %}
+                <small class="text-warning"><i class="bi bi-arrow-left-right me-1"></i>Moderate volatility — some ups and downs.</small>
+                {% else %}
+                <small class="text-success"><i class="bi bi-shield-check me-1"></i>Low volatility — relatively stable stock.</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ── Signals ─────────────────────────────────────────────────── -->
+{% if signals %}
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-header bg-transparent border-secondary">
+        <h5 class="mb-0"><i class="bi bi-bell me-2 text-info"></i>Trading Signals</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Signals are automatically computed suggestions based on technical analysis.
+            <strong>They are not financial advice.</strong> Always do your own research.
+        </p>
+        <div class="row g-2">
+            <!-- Trend Signal -->
+            {% if signals.trend %}
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-2 p-3 rounded" style="background:rgba(255,255,255,0.05);">
+                    {% if signals.trend.direction == 'BULLISH' %}
+                        <i class="bi bi-trending-up fs-3 text-success"></i>
+                    {% else %}
+                        <i class="bi bi-trending-down fs-3 text-danger"></i>
+                    {% endif %}
+                    <div>
+                        <div class="small text-muted">Trend Direction</div>
+                        <div class="fw-semibold
+                            {% if signals.trend.direction == 'BULLISH' %}text-success
+                            {% else %}text-danger{% endif %}">
+                            {{ signals.trend.direction }}
+                        </div>
+                        {% if signals.trend.strength %}
+                        <small class="text-muted">
+                            Strength: {{ signals.trend.strength|floatformat:1 }}
+                            &nbsp;|&nbsp;
+                            Short SMA: ${{ signals.trend.short_sma|floatformat:2 }}
+                            &nbsp;|&nbsp;
+                            Long SMA: ${{ signals.trend.long_sma|floatformat:2 }}
+                        </small>
+                        {% endif %}
+                        <div class="small mt-1">
+                            {% if signals.trend.direction == 'BULLISH' %}
+                            <span class="text-success"><i class="bi bi-info-circle me-1"></i>Short-term average is ABOVE long-term — uptrend in progress.</span>
+                            {% else %}
+                            <span class="text-danger"><i class="bi bi-info-circle me-1"></i>Short-term average is BELOW long-term — downtrend in progress.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Breakout Signal -->
+            {% if signals.breakout %}
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-2 p-3 rounded" style="background:rgba(255,255,255,0.05);">
+                    {% if signals.breakout.status == 'BREAKOUT_UP' %}
+                        <i class="bi bi-arrow-up-right-circle fs-3 text-success"></i>
+                    {% elif signals.breakout.status == 'BREAKOUT_DOWN' %}
+                        <i class="bi bi-arrow-down-right-circle fs-3 text-danger"></i>
+                    {% else %}
+                        <i class="bi bi-dash-circle fs-3 text-secondary"></i>
+                    {% endif %}
+                    <div>
+                        <div class="small text-muted">Breakout Signal</div>
+                        <div class="fw-semibold
+                            {% if signals.breakout.status == 'BREAKOUT_UP' %}text-success
+                            {% elif signals.breakout.status == 'BREAKOUT_DOWN' %}text-danger
+                            {% else %}text-secondary{% endif %}">
+                            {% if signals.breakout.status == 'BREAKOUT_UP' %}🚀 Breaking Out Upward
+                            {% elif signals.breakout.status == 'BREAKOUT_DOWN' %}📉 Breaking Down
+                            {% else %}😐 No Breakout Detected
+                            {% endif %}
+                        </div>
+                        {% if signals.breakout.upper_band and signals.breakout.lower_band %}
+                        <small class="text-muted">
+                            Upper band: ${{ signals.breakout.upper_band|floatformat:2 }}
+                            &nbsp;|&nbsp;
+                            Lower band: ${{ signals.breakout.lower_band|floatformat:2 }}
+                        </small>
+                        {% endif %}
+                        <div class="small mt-1 text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            A breakout means the price has moved outside its normal range — possibly starting a big move.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- ── Beginner Glossary ───────────────────────────────────────── -->
+<div class="card bg-dark border-secondary mb-4" id="glossary">
+    <div class="card-header bg-transparent border-secondary">
+        <h5 class="mb-0"><i class="bi bi-book me-2 text-info"></i>📖 Stock Market Glossary — Beginner's Guide</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <dl>
+                    <dt class="text-info">📈 Stock / Share</dt>
+                    <dd class="text-muted small">A small piece of ownership in a company. If Apple has 1 billion shares and you own 1, you own 1 billionth of Apple.</dd>
+
+                    <dt class="text-info">💰 Stock Price</dt>
+                    <dd class="text-muted small">The current cost to buy one share. Determined by what buyers are willing to pay and sellers are willing to accept.</dd>
+
+                    <dt class="text-info">📊 % Change</dt>
+                    <dd class="text-muted small">How much the price moved today vs. yesterday's closing price. +2% means it rose 2%. -3% means it fell 3%.</dd>
+
+                    <dt class="text-info">📉 Volume</dt>
+                    <dd class="text-muted small">Total number of shares traded in a day. High volume means lots of people are buying/selling — the stock is "active".</dd>
+
+                    <dt class="text-info">🌅 Opening Price</dt>
+                    <dd class="text-muted small">The first price when trading begins each morning at 9:30 AM Eastern Time (New York).</dd>
+
+                    <dt class="text-info">🌙 Previous Close</dt>
+                    <dd class="text-muted small">The last price when trading ended the previous day at 4:00 PM Eastern Time.</dd>
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <dl>
+                    <dt class="text-info">📐 Moving Average (SMA)</dt>
+                    <dd class="text-muted small">The average price over the last N days. Smooths out daily noise to reveal the real trend. Price above SMA 20 = uptrend.</dd>
+
+                    <dt class="text-info">⚡ RSI (Strength Index)</dt>
+                    <dd class="text-muted small">A score from 0–100. Above 70 = "overbought" (might drop). Below 30 = "oversold" (might rise). 40–60 = normal range.</dd>
+
+                    <dt class="text-info">🌊 Volatility</dt>
+                    <dd class="text-muted small">How "jumpy" a stock is. High volatility = large price swings (risky). Low volatility = stable, steady price movements.</dd>
+
+                    <dt class="text-info">🐂 Bullish</dt>
+                    <dd class="text-muted small">Expecting the price to go UP. A "bull market" is when prices are generally rising.</dd>
+
+                    <dt class="text-info">🐻 Bearish</dt>
+                    <dd class="text-muted small">Expecting the price to go DOWN. A "bear market" is when prices are generally falling (down 20%+ from recent high).</dd>
+
+                    <dt class="text-info">📡 Watchlist</dt>
+                    <dd class="text-muted small">Your personal list of stocks you want to monitor. You don't own them — you just track their price movements.</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const labels = {{ chart_labels|safe }};
+const prices = {{ chart_prices|safe }};
+
+const ctx = document.getElementById('priceChart').getContext('2d');
+
+// Color the line green or red based on overall trend
+const startPrice = prices[0] || 0;
+const endPrice = prices[prices.length - 1] || 0;
+const lineColor = endPrice >= startPrice ? '#198754' : '#dc3545';
+const fillColor = endPrice >= startPrice ? 'rgba(25,135,84,0.1)' : 'rgba(220,53,69,0.1)';
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: '{{ stock.name }} Price',
+            data: prices,
+            borderColor: lineColor,
+            backgroundColor: fillColor,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            fill: true,
+            tension: 0.3,
+        }]
+    },
+    options: {
+        responsive: true,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+            legend: { labels: { color: '#adb5bd' } },
+            tooltip: {
+                callbacks: {
+                    label: ctx => `$${ctx.parsed.y.toFixed(2)}`,
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                    color: '#adb5bd',
+                    maxTicksLimit: 10,
+                    maxRotation: 0,
+                }
+            },
+            y: {
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                    color: '#adb5bd',
+                    callback: val => `$${val.toFixed(0)}`,
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

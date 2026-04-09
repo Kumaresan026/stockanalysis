@@ -1,0 +1,291 @@
+{% extends 'stocks/base.html' %}
+
+{% block title %}Analytics - {{ symbol }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">
+        <i class="bi bi-bar-chart-line me-2 text-info"></i>Analytics Dashboard
+    </h2>
+    <form action="{% url 'analytics' %}" method="GET" class="d-flex">
+        <input type="text" name="symbol" class="form-control bg-dark border-secondary text-light me-2"
+               value="{{ symbol }}" placeholder="Symbol..." style="max-width: 150px;">
+        <button class="btn btn-info" type="submit">Analyze</button>
+    </form>
+</div>
+
+<!-- Stock Info -->
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h3 class="fw-bold mb-1">{{ symbol }}</h3>
+                <span class="display-6 fw-bold">${{ stock.price|floatformat:2 }}</span>
+                <span class="ms-2 {% if stock.change_percent >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if stock.change_percent >= 0 %}+{% endif %}{{ stock.change_percent|floatformat:2 }}%
+                </span>
+            </div>
+            <div class="col-md-6">
+                <div class="row">
+                    {% if indicators.volatility %}
+                    <div class="col-4 text-center">
+                        <small class="text-muted d-block">Volatility</small>
+                        <span class="fw-semibold">{{ indicators.volatility|floatformat:4 }}</span>
+                    </div>
+                    {% endif %}
+                    {% if indicators.rsi %}
+                    <div class="col-4 text-center">
+                        <small class="text-muted d-block">RSI</small>
+                        <span class="fw-semibold {% if indicators.rsi > 70 %}text-danger{% elif indicators.rsi < 30 %}text-success{% endif %}">
+                            {{ indicators.rsi|floatformat:1 }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if indicators.sma_20 %}
+                    <div class="col-4 text-center">
+                        <small class="text-muted d-block">SMA 20</small>
+                        <span class="fw-semibold">${{ indicators.sma_20|floatformat:2 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Price Chart with Moving Averages -->
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-header bg-transparent border-secondary">
+        <h5 class="mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>Price with Moving Averages</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="analyticsChart" height="120"></canvas>
+    </div>
+</div>
+
+<!-- Indicator Cards -->
+<div class="row mb-4">
+    {% if indicators.sma_20 %}
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+                <small class="text-muted d-block mb-1">SMA (20)</small>
+                <span class="fs-4 fw-bold">${{ indicators.sma_20|floatformat:2 }}</span>
+                <div class="mt-2">
+                    {% if stock.price > indicators.sma_20 %}
+                    <span class="badge bg-success">Above SMA</span>
+                    {% else %}
+                    <span class="badge bg-danger">Below SMA</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if indicators.sma_50 %}
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+                <small class="text-muted d-block mb-1">SMA (50)</small>
+                <span class="fs-4 fw-bold">${{ indicators.sma_50|floatformat:2 }}</span>
+                <div class="mt-2">
+                    {% if stock.price > indicators.sma_50 %}
+                    <span class="badge bg-success">Above SMA</span>
+                    {% else %}
+                    <span class="badge bg-danger">Below SMA</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if indicators.ema_12 %}
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+                <small class="text-muted d-block mb-1">EMA (12)</small>
+                <span class="fs-4 fw-bold">${{ indicators.ema_12|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if indicators.ema_26 %}
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-body">
+                <small class="text-muted d-block mb-1">EMA (26)</small>
+                <span class="fs-4 fw-bold">${{ indicators.ema_26|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Bollinger Bands & RSI -->
+<div class="row mb-4">
+    {% if indicators.bollinger_upper %}
+    <div class="col-md-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-arrows-expand me-2"></i>Bollinger Bands</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Upper Band</span>
+                    <span class="text-success fw-semibold">${{ indicators.bollinger_upper|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Middle Band</span>
+                    <span class="fw-semibold">${{ indicators.bollinger_middle|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Lower Band</span>
+                    <span class="text-danger fw-semibold">${{ indicators.bollinger_lower|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if indicators.rsi %}
+    <div class="col-md-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-speedometer me-2"></i>RSI (14)</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <span class="display-4 fw-bold {% if indicators.rsi > 70 %}text-danger{% elif indicators.rsi < 30 %}text-success{% else %}text-info{% endif %}">
+                        {{ indicators.rsi|floatformat:1 }}
+                    </span>
+                    <div class="mt-2">
+                        {% if indicators.rsi > 70 %}
+                        <span class="badge bg-danger fs-6">Overbought</span>
+                        {% elif indicators.rsi < 30 %}
+                        <span class="badge bg-success fs-6">Oversold</span>
+                        {% else %}
+                        <span class="badge bg-info fs-6">Neutral</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="progress mt-3" style="height: 8px;">
+                    <div class="progress-bar {% if indicators.rsi > 70 %}bg-danger{% elif indicators.rsi < 30 %}bg-success{% else %}bg-info{% endif %}"
+                         style="width: {{ indicators.rsi }}%;"></div>
+                </div>
+                <div class="d-flex justify-content-between mt-1 small text-muted">
+                    <span>0 (Oversold)</span>
+                    <span>100 (Overbought)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Signals -->
+{% if signals.trend %}
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2 text-primary"></i>Trend Detection</h6>
+            </div>
+            <div class="card-body text-center">
+                <span class="badge fs-5 p-3 {% if signals.trend.direction == 'BULLISH' %}bg-success{% elif signals.trend.direction == 'BEARISH' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {% if signals.trend.direction == 'BULLISH' %}<i class="bi bi-arrow-up-right me-1"></i>{% elif signals.trend.direction == 'BEARISH' %}<i class="bi bi-arrow-down-right me-1"></i>{% endif %}
+                    {{ signals.trend.direction }}
+                </span>
+                <p class="text-muted mt-2 mb-0">Strength: {{ signals.trend.strength }}%</p>
+            </div>
+        </div>
+    </div>
+    {% if signals.breakout %}
+    <div class="col-md-6 mb-3">
+        <div class="card bg-dark border-secondary h-100">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-lightning-fill me-2 text-warning"></i>Breakout Detection</h6>
+            </div>
+            <div class="card-body text-center">
+                <span class="badge fs-5 p-3 {% if 'UP' in signals.breakout.status %}bg-success{% elif 'DOWN' in signals.breakout.status %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ signals.breakout.status }}
+                </span>
+                <p class="text-muted mt-2 mb-0">
+                    Range: ${{ signals.breakout.lower_band }} — ${{ signals.breakout.upper_band }}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    const chartLabels = {{ chart_labels|safe }};
+    const chartPrices = {{ chart_prices|safe }};
+    const sma20 = {{ chart_sma_20|safe }};
+    const sma50 = {{ chart_sma_50|safe }};
+
+    const datasets = [{
+        label: '{{ symbol }} Price',
+        data: chartPrices,
+        borderColor: '#0d6efd',
+        backgroundColor: 'rgba(13, 110, 253, 0.05)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 0,
+        borderWidth: 2,
+    }];
+
+    if (sma20.length > 0) {
+        datasets.push({
+            label: 'SMA 20',
+            data: sma20,
+            borderColor: '#ffc107',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+        });
+    }
+
+    if (sma50.length > 0) {
+        datasets.push({
+            label: 'SMA 50',
+            data: sma50,
+            borderColor: '#dc3545',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+        });
+    }
+
+    new Chart(ctx, {
+        type: 'line',
+        data: { labels: chartLabels, datasets: datasets },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#adb5bd' } },
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#6c757d', maxTicksLimit: 12 },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                },
+                y: {
+                    ticks: { color: '#6c757d', callback: v => '$' + v.toFixed(2) },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

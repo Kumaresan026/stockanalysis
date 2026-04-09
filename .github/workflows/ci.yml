@@ -1,0 +1,68 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    env:
+      DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
+      DJANGO_DEBUG: "True"
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install stock_event_engine library
+        run: pip install -e .
+
+      - name: Run pylint
+        run: |
+          pylint stocks/ --load-plugins pylint_django \
+            --django-settings-module=stock_platform.settings \
+            --disable=C0114,C0115,C0116,E1101,W0223,R0903 \
+            --fail-under=6.0 || true
+
+      - name: Run Django system checks
+        run: python manage.py check --deploy --fail-level WARNING || python manage.py check
+
+      - name: Run migrations check
+        run: python manage.py makemigrations --check --dry-run || true
+
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput
+
+  # Optional: deploy on push to main
+  deploy:
+    name: Deploy to EC2
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        run: |
+          echo "Deployment step — configure SSH and rsync to your EC2 instance"
+          echo "Example:"
+          echo "  ssh -o StrictHostKeyChecking=no ec2-user@\$EC2_HOST 'cd /app && git pull && sudo systemctl restart gunicorn'"

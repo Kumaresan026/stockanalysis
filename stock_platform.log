@@ -1,0 +1,907 @@
+INFO 2026-04-04 17:20:16,698 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:20:18,842 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:20:20,902 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:20:22,973 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:20:25,051 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:20:27,073 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:20:29,084 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:20:33,138 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:20:35,149 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:21:12,633 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:21:14,742 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:21:16,773 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:21:18,805 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:21:20,840 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:21:22,860 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:21:24,879 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:21:28,915 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:21:30,942 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:22:09,474 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:22:11,598 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:22:13,625 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:22:15,660 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:22:17,705 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:22:19,720 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:22:21,742 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:22:25,801 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:22:27,816 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:25:01,523 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 17:25:06,790 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:25:08,875 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:25:10,908 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:25:12,930 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:25:14,972 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:25:16,990 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:25:19,014 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:25:23,042 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:25:25,065 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:39:02,664 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\api\stock_api.py changed, reloading.
+INFO 2026-04-04 17:39:04,780 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 17:39:10,067 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:39:12,159 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:39:14,180 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:39:16,213 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:39:18,236 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:39:20,245 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:39:22,281 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:39:26,324 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:39:28,337 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:40:58,584 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\services\dynamodb_service.py changed, reloading.
+INFO 2026-04-04 17:40:59,876 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 17:41:00,649 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:00,811 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:41:00,817 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:00,826 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:41:00,836 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:00,839 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:00,842 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:00,976 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:00,980 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:17,608 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\services\s3_service.py changed, reloading.
+INFO 2026-04-04 17:41:18,555 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 17:41:19,229 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:19,404 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:41:19,495 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:19,499 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:41:19,515 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:19,517 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:19,522 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:19,658 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:19,664 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:35,297 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\services\sqs_service.py changed, reloading.
+INFO 2026-04-04 17:41:36,267 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 17:41:36,910 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:37,115 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:41:37,202 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:37,289 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:41:37,299 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:37,392 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:37,392 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:37,551 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:37,555 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:52,227 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\services\sns_service.py changed, reloading.
+INFO 2026-04-04 17:41:53,280 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 17:41:53,926 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:54,062 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:41:54,151 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:54,263 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:41:54,377 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:54,493 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:41:54,496 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:41:54,649 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:41:54,649 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:42:09,262 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\services\cloudwatch_service.py changed, reloading.
+INFO 2026-04-04 17:42:10,327 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 17:42:10,958 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:42:11,125 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:42:11,224 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:42:11,351 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:42:11,452 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:42:11,596 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:42:11,696 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:42:11,833 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:42:11,934 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:48:01,536 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:48:01,766 s3_service S3 service initialized successfully.
+INFO 2026-04-04 17:48:01,898 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:48:02,005 sns_service SNS service initialized successfully.
+INFO 2026-04-04 17:48:02,122 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:48:02,210 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 17:48:02,323 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 17:48:02,460 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 17:48:02,565 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:10:00,049 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:10:00,213 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:10:00,310 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:10:00,399 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:10:00,494 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:10:00,600 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:10:00,707 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:10:00,855 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:10:00,954 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:10:01,113 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:10:22,793 dynamodb_service DynamoDB table 'stock_data' created successfully.
+INFO 2026-04-04 18:10:43,167 dynamodb_service DynamoDB table 'user_watchlists' created successfully.
+INFO 2026-04-04 18:11:03,612 dynamodb_service DynamoDB table 'alert_rules' created successfully.
+INFO 2026-04-04 18:11:23,940 dynamodb_service DynamoDB table 'analytics_results' created successfully.
+INFO 2026-04-04 18:11:24,102 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:11:25,092 s3_service S3 bucket 'stock-platform-reports-2024' created.
+INFO 2026-04-04 18:11:25,214 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:11:26,192 sqs_service SQS queue created/retrieved: https://sqs.us-east-1.amazonaws.com/669473726067/stock-events-queue
+INFO 2026-04-04 18:11:26,427 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:11:27,416 sns_service SNS topic created: arn:aws:sns:us-east-1:669473726067:stock-alerts-topic
+INFO 2026-04-04 18:11:27,513 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:11:28,458 cloudwatch_service CloudWatch log group 'stock-platform-logs' created.
+INFO 2026-04-04 18:12:50,386 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 18:12:51,163 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:12:51,318 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:12:51,415 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:12:51,513 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:12:51,637 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:12:51,738 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:12:51,862 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:12:52,005 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:12:52,166 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:15:40,074 autoreload C:\Users\kumar\Desktop\stockanalysis\stock_platform\settings.py changed, reloading.
+INFO 2026-04-04 18:15:42,063 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 18:15:43,194 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:15:43,362 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:15:43,455 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:15:43,556 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:15:43,662 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:15:43,767 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:15:43,886 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:15:44,016 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:15:44,121 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:16:10,984 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\views.py changed, reloading.
+INFO 2026-04-04 18:16:11,917 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 18:16:12,508 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:16:12,686 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:16:12,886 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:16:12,981 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:16:13,080 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:16:13,172 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:16:13,271 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:16:13,399 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:16:13,513 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:18:09,967 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 18:18:11,087 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:18:11,255 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:18:11,360 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:18:11,474 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:18:11,592 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:18:11,687 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:18:11,786 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:18:11,934 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:18:12,044 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:28:48,435 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:28:48,730 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:28:49,023 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:28:49,285 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:28:49,565 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:28:49,995 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:28:50,370 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:28:50,845 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:28:51,146 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:32:04,637 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 18:32:06,062 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:32:06,231 s3_service S3 service initialized successfully.
+INFO 2026-04-04 18:32:06,380 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:32:06,477 sns_service SNS service initialized successfully.
+INFO 2026-04-04 18:32:06,587 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:32:06,680 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 18:32:06,796 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 18:32:06,937 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 18:32:07,073 cloudwatch_service CloudWatch service initialized successfully.
+WARNING 2026-04-04 18:32:24,976 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:32:24,979 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 18:32:24,979 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 18:32:24,980 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 18:32:24,983 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 18:32:24,984 stock_api Using demo data for META.
+WARNING 2026-04-04 18:32:24,985 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 18:32:24,989 stock_api Using demo data for JPM.
+WARNING 2026-04-04 18:32:24,990 stock_api Using demo data for V.
+WARNING 2026-04-04 18:32:24,994 stock_api Using demo data for WMT.
+WARNING 2026-04-04 18:32:24,998 stock_api Using demo data for DIS.
+WARNING 2026-04-04 18:32:25,012 stock_api Using demo data for NFLX.
+INFO 2026-04-04 18:32:27,228 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:32:27,342 cloudwatch_service CloudWatch log stream 'system-events' created.
+INFO 2026-04-04 18:32:27,471 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 18:32:52,261 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:32:52,262 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 18:32:52,268 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 18:32:52,269 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 18:32:52,271 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 18:32:52,280 stock_api Using demo data for META.
+WARNING 2026-04-04 18:32:52,287 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 18:32:52,288 stock_api Using demo data for JPM.
+WARNING 2026-04-04 18:32:52,290 stock_api Using demo data for V.
+WARNING 2026-04-04 18:32:52,292 stock_api Using demo data for WMT.
+WARNING 2026-04-04 18:32:52,305 stock_api Using demo data for DIS.
+WARNING 2026-04-04 18:32:52,312 stock_api Using demo data for NFLX.
+INFO 2026-04-04 18:32:54,287 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:32:54,492 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 18:38:10,083 sns_service SNS subscription created for kumaresan2126@gmail.com: arn:aws:sns:us-east-1:669473726067:stock-alerts-topic:67e25ff9-fc2f-4978-b17b-5a4c1ad6b14c
+INFO 2026-04-04 18:38:12,038 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:38:12,269 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 18:38:12,313 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:38:12,315 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 18:38:12,317 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 18:38:12,317 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 18:38:12,318 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 18:38:12,319 stock_api Using demo data for META.
+WARNING 2026-04-04 18:38:12,319 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 18:38:12,321 stock_api Using demo data for JPM.
+WARNING 2026-04-04 18:38:12,323 stock_api Using demo data for V.
+WARNING 2026-04-04 18:38:12,323 stock_api Using demo data for WMT.
+WARNING 2026-04-04 18:38:12,323 stock_api Using demo data for DIS.
+WARNING 2026-04-04 18:38:12,325 stock_api Using demo data for NFLX.
+INFO 2026-04-04 18:38:12,439 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:38:12,662 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 18:38:33,731 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:38:33,734 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 18:38:33,736 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 18:38:33,737 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 18:38:33,741 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 18:38:33,746 stock_api Using demo data for META.
+WARNING 2026-04-04 18:38:33,749 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 18:38:33,753 stock_api Using demo data for JPM.
+WARNING 2026-04-04 18:38:33,758 stock_api Using demo data for V.
+WARNING 2026-04-04 18:38:33,759 stock_api Using demo data for WMT.
+WARNING 2026-04-04 18:38:33,762 stock_api Using demo data for DIS.
+WARNING 2026-04-04 18:38:33,763 stock_api Using demo data for NFLX.
+INFO 2026-04-04 18:38:35,525 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:38:35,738 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 18:38:45,017 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:38:45,025 stock_api Using demo history for AAPL.
+INFO 2026-04-04 18:38:46,898 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 18:38:48,957 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:38:49,170 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 18:38:51,105 s3_service Uploaded to S3: s3://stock-platform-reports-2024/reports/AAPL/analytics_20260404_173849.json
+WARNING 2026-04-04 18:38:52,744 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:38:52,746 stock_api Using demo history for AAPL.
+INFO 2026-04-04 18:38:52,884 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 18:38:52,982 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:38:53,152 sqs_service SQS message sent: ANALYTICS_REQUEST (ID: 1bae882c-e9ef-405a-9a9d-a3b1d9efd4f1)
+INFO 2026-04-04 18:38:53,184 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 18:38:53,399 s3_service Uploaded to S3: s3://stock-platform-reports-2024/reports/AAPL/analytics_20260404_173853.json
+INFO 2026-04-04 18:38:53,502 sqs_service SQS message sent: ANALYTICS_REQUEST (ID: 35bb8427-504b-4144-999b-9a705e5a3b43)
+INFO 2026-04-04 18:38:55,199 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:38:55,320 cloudwatch_service CloudWatch log stream 'sqs-events' created.
+INFO 2026-04-04 18:38:55,434 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 18:38:55,542 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:38:55,742 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+WARNING 2026-04-04 18:39:59,460 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:39:59,466 stock_api Using demo history for AAPL.
+INFO 2026-04-04 18:39:59,623 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 18:40:01,818 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:40:02,040 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 18:40:04,234 s3_service Uploaded to S3: s3://stock-platform-reports-2024/reports/AAPL/analytics_20260404_174002.json
+INFO 2026-04-04 18:40:06,319 sqs_service SQS message sent: ANALYTICS_REQUEST (ID: 6c0b5d9b-ced6-4743-961d-e2e62228c975)
+INFO 2026-04-04 18:40:08,342 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:40:08,552 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+WARNING 2026-04-04 18:40:13,794 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:40:13,794 stock_api Using demo history for AAPL.
+INFO 2026-04-04 18:40:15,655 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-04 18:40:15,762 sqs_service SQS message sent: STOCK_UPDATE (ID: bdcffe25-3f6c-45d7-a570-f759e062d8f3)
+INFO 2026-04-04 18:40:17,768 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:40:17,969 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 18:40:17,970 producer Stock update event sent for AAPL
+INFO 2026-04-04 18:40:19,912 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:40:20,017 cloudwatch_service CloudWatch log stream 'stock-fetches' created.
+INFO 2026-04-04 18:40:20,128 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 18:40:20,243 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 18:40:22,338 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:40:22,542 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 18:43:39,458 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:43:39,471 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 18:43:39,472 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 18:43:39,473 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 18:43:39,475 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 18:43:39,475 stock_api Using demo data for META.
+WARNING 2026-04-04 18:43:39,475 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 18:43:39,475 stock_api Using demo data for JPM.
+WARNING 2026-04-04 18:43:39,478 stock_api Using demo data for V.
+WARNING 2026-04-04 18:43:39,478 stock_api Using demo data for WMT.
+WARNING 2026-04-04 18:43:39,479 stock_api Using demo data for DIS.
+WARNING 2026-04-04 18:43:39,480 stock_api Using demo data for NFLX.
+INFO 2026-04-04 18:43:41,611 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:43:41,837 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 18:48:20,195 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:48:20,201 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 18:48:20,201 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 18:48:20,205 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 18:48:20,205 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 18:48:20,208 stock_api Using demo data for META.
+WARNING 2026-04-04 18:48:20,209 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 18:48:20,212 stock_api Using demo data for JPM.
+WARNING 2026-04-04 18:48:20,213 stock_api Using demo data for V.
+WARNING 2026-04-04 18:48:20,216 stock_api Using demo data for WMT.
+WARNING 2026-04-04 18:48:20,218 stock_api Using demo data for DIS.
+WARNING 2026-04-04 18:48:20,221 stock_api Using demo data for NFLX.
+INFO 2026-04-04 18:48:22,636 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:48:22,863 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 18:48:28,834 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:48:28,838 stock_api Using demo history for AAPL.
+INFO 2026-04-04 18:48:30,865 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 18:48:32,891 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:48:33,098 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 18:48:35,465 s3_service Uploaded to S3: s3://stock-platform-reports-2024/reports/AAPL/analytics_20260404_174833.json
+INFO 2026-04-04 18:48:37,555 sqs_service SQS message sent: ANALYTICS_REQUEST (ID: 064066cf-8103-4e57-bb23-5f2614ebbb67)
+INFO 2026-04-04 18:48:39,603 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 18:48:39,815 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+WARNING 2026-04-04 18:59:56,968 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 18:59:57,006 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 18:59:57,006 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 18:59:57,006 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 18:59:57,008 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 18:59:57,009 stock_api Using demo data for META.
+WARNING 2026-04-04 18:59:57,010 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 18:59:57,013 stock_api Using demo data for JPM.
+WARNING 2026-04-04 18:59:57,014 stock_api Using demo data for V.
+WARNING 2026-04-04 18:59:57,016 stock_api Using demo data for WMT.
+WARNING 2026-04-04 18:59:57,017 stock_api Using demo data for DIS.
+WARNING 2026-04-04 18:59:57,019 stock_api Using demo data for NFLX.
+INFO 2026-04-04 18:59:59,889 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:00:00,142 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 19:03:34,674 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 19:03:34,681 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 19:03:34,686 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 19:03:34,688 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 19:03:34,692 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 19:03:34,692 stock_api Using demo data for META.
+WARNING 2026-04-04 19:03:34,692 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 19:03:34,698 stock_api Using demo data for JPM.
+WARNING 2026-04-04 19:03:34,699 stock_api Using demo data for V.
+WARNING 2026-04-04 19:03:34,707 stock_api Using demo data for WMT.
+WARNING 2026-04-04 19:03:34,709 stock_api Using demo data for DIS.
+WARNING 2026-04-04 19:03:34,709 stock_api Using demo data for NFLX.
+INFO 2026-04-04 19:03:36,871 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:03:37,097 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 19:03:48,762 stock_api Using demo data for NFLX.
+WARNING 2026-04-04 19:03:48,768 stock_api Using demo history for NFLX.
+INFO 2026-04-04 19:03:50,912 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-04 19:03:52,961 sqs_service SQS message sent: STOCK_UPDATE (ID: 78ccea4b-7767-4ff7-b188-bdffbb744c73)
+INFO 2026-04-04 19:03:54,857 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:03:55,077 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 19:03:55,080 producer Stock update event sent for NFLX
+INFO 2026-04-04 19:03:56,855 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:03:57,095 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 19:03:59,137 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 19:04:00,980 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:04:01,192 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 19:07:25,477 stock_api Using demo data for NFLX.
+WARNING 2026-04-04 19:07:25,522 stock_api Using demo history for NFLX.
+INFO 2026-04-04 19:07:28,133 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-04 19:07:30,333 sqs_service SQS message sent: STOCK_UPDATE (ID: e0f4a6ac-cdcf-473b-8097-91020e7a4c39)
+INFO 2026-04-04 19:07:32,228 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:07:32,482 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 19:07:32,483 producer Stock update event sent for NFLX
+INFO 2026-04-04 19:07:34,193 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:07:34,432 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 19:07:36,358 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 19:07:38,020 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:07:38,245 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 19:07:59,839 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 19:07:59,879 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 19:07:59,879 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 19:07:59,883 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 19:07:59,888 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 19:07:59,889 stock_api Using demo data for META.
+WARNING 2026-04-04 19:07:59,892 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 19:07:59,895 stock_api Using demo data for JPM.
+WARNING 2026-04-04 19:07:59,895 stock_api Using demo data for V.
+WARNING 2026-04-04 19:07:59,901 stock_api Using demo data for WMT.
+WARNING 2026-04-04 19:07:59,904 stock_api Using demo data for DIS.
+WARNING 2026-04-04 19:07:59,904 stock_api Using demo data for NFLX.
+INFO 2026-04-04 19:08:02,642 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:08:02,920 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 19:08:42,767 stock_api Using demo data for NFLX.
+WARNING 2026-04-04 19:08:42,771 stock_api Using demo history for NFLX.
+INFO 2026-04-04 19:08:42,966 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-04 19:08:44,830 sqs_service SQS message sent: STOCK_UPDATE (ID: 0543b36f-a4d0-46c0-8de0-59ced716f9bb)
+INFO 2026-04-04 19:08:46,451 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:08:46,681 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 19:08:46,683 producer Stock update event sent for NFLX
+INFO 2026-04-04 19:08:48,436 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:08:48,642 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 19:08:48,804 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 19:08:50,784 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:08:50,993 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 19:16:17,949 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\api\stock_api.py changed, reloading.
+INFO 2026-04-04 19:16:21,215 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 19:16:22,899 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 19:16:23,134 s3_service S3 service initialized successfully.
+INFO 2026-04-04 19:16:23,257 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 19:16:23,351 sns_service SNS service initialized successfully.
+INFO 2026-04-04 19:16:23,455 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:16:23,565 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 19:16:23,670 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:16:23,826 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 19:16:23,937 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:16:34,665 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\api\stock_api.py changed, reloading.
+INFO 2026-04-04 19:16:35,967 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 19:16:36,625 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 19:16:36,781 s3_service S3 service initialized successfully.
+INFO 2026-04-04 19:16:36,892 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 19:16:37,030 sns_service SNS service initialized successfully.
+INFO 2026-04-04 19:16:37,154 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:16:37,251 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 19:16:37,366 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:16:37,503 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 19:16:37,610 cloudwatch_service CloudWatch service initialized successfully.
+WARNING 2026-04-04 19:20:37,713 stock_api Using demo data for NFLX.
+WARNING 2026-04-04 19:20:37,734 stock_api Using demo history for NFLX.
+INFO 2026-04-04 19:20:39,939 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-04 19:20:42,068 sqs_service SQS message sent: STOCK_UPDATE (ID: 51fc09e8-fd1e-41d5-9a3a-b20f65f1a498)
+INFO 2026-04-04 19:20:43,850 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:20:44,078 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 19:20:44,079 producer Stock update event sent for NFLX
+INFO 2026-04-04 19:20:46,044 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:20:46,345 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 19:20:48,179 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 19:20:50,010 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:20:50,274 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 19:21:58,344 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 19:21:58,373 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 19:21:58,374 stock_api Using demo data for MSFT.
+WARNING 2026-04-04 19:21:58,374 stock_api Using demo data for AMZN.
+WARNING 2026-04-04 19:21:58,374 stock_api Using demo data for TSLA.
+WARNING 2026-04-04 19:21:58,376 stock_api Using demo data for META.
+WARNING 2026-04-04 19:21:58,377 stock_api Using demo data for NVDA.
+WARNING 2026-04-04 19:21:58,377 stock_api Using demo data for JPM.
+WARNING 2026-04-04 19:21:58,377 stock_api Using demo data for V.
+WARNING 2026-04-04 19:21:58,379 stock_api Using demo data for WMT.
+WARNING 2026-04-04 19:21:58,379 stock_api Using demo data for DIS.
+WARNING 2026-04-04 19:21:58,380 stock_api Using demo data for NFLX.
+INFO 2026-04-04 19:22:00,755 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:22:01,050 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-04 19:23:08,277 stock_api Using demo data for GOOGL.
+WARNING 2026-04-04 19:23:08,280 stock_api Using demo history for GOOGL.
+INFO 2026-04-04 19:23:10,410 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+WARNING 2026-04-04 19:23:10,956 stock_api Using demo data for AAPL.
+WARNING 2026-04-04 19:23:10,962 stock_api Using demo history for AAPL.
+INFO 2026-04-04 19:23:11,073 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-04 19:23:12,588 sqs_service SQS message sent: STOCK_UPDATE (ID: 4128497a-6797-4152-b2a2-edcb035de812)
+INFO 2026-04-04 19:23:12,883 sqs_service SQS message sent: STOCK_UPDATE (ID: 550aeafc-5ac2-44a4-b7f2-02269000b51e)
+INFO 2026-04-04 19:23:16,442 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:23:16,734 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 19:23:16,745 producer Stock update event sent for GOOGL
+INFO 2026-04-04 19:23:17,599 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:23:17,806 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 19:23:17,806 producer Stock update event sent for AAPL
+INFO 2026-04-04 19:23:18,862 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:23:19,075 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 19:23:19,613 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:23:19,816 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 19:23:20,845 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 19:23:21,485 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 19:23:22,658 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:23:22,868 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 19:23:23,336 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:23:23,546 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 19:38:32,368 autoreload Watching for file changes with StatReloader
+INFO 2026-04-04 19:38:33,992 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 19:38:34,196 s3_service S3 service initialized successfully.
+INFO 2026-04-04 19:38:34,297 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 19:38:34,394 sns_service SNS service initialized successfully.
+INFO 2026-04-04 19:38:34,512 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:38:34,609 sqs_service SQS service initialized successfully.
+INFO 2026-04-04 19:38:34,723 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:38:34,874 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-04 19:38:35,007 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-04 19:38:54,174 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-04 19:38:55,884 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-04 19:38:56,001 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-04 19:38:56,211 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-04 19:38:56,431 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-04 19:38:56,632 stock_api Fetched META from Finnhub.
+INFO 2026-04-04 19:38:56,842 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-04 19:38:57,043 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-04 19:38:57,159 stock_api Fetched V from Alpha Vantage.
+INFO 2026-04-04 19:38:57,361 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-04 19:38:57,567 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-04 19:38:57,775 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-04 19:39:00,186 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:39:00,423 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-04 19:39:02,267 stock_api Fetched AAPL from Alpha Vantage.
+WARNING 2026-04-04 19:39:02,369 stock_api Using demo history for AAPL.
+INFO 2026-04-04 19:39:04,137 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-04 19:39:06,013 sqs_service SQS message sent: STOCK_UPDATE (ID: cece1d10-2fa9-488c-a389-9a83236a7b48)
+INFO 2026-04-04 19:39:07,765 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:39:07,978 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-04 19:39:07,979 producer Stock update event sent for AAPL
+INFO 2026-04-04 19:39:09,846 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:39:10,051 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-04 19:39:11,775 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-04 19:39:13,517 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-04 19:39:13,724 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 12:24:48,853 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:24:49,145 s3_service S3 service initialized successfully.
+INFO 2026-04-06 12:24:49,285 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:24:49,491 sns_service SNS service initialized successfully.
+INFO 2026-04-06 12:24:49,725 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:24:49,861 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:24:49,999 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:24:50,175 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:24:50,323 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:07,032 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:25:07,227 s3_service S3 service initialized successfully.
+INFO 2026-04-06 12:25:07,376 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:25:07,490 sns_service SNS service initialized successfully.
+INFO 2026-04-06 12:25:07,597 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:07,696 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:25:07,831 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:08,035 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:25:08,160 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:21,175 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:25:21,354 s3_service S3 service initialized successfully.
+INFO 2026-04-06 12:25:21,452 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:25:21,551 sns_service SNS service initialized successfully.
+INFO 2026-04-06 12:25:21,662 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:21,769 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:25:21,875 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:22,051 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:25:22,162 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:33,303 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:25:33,445 s3_service S3 service initialized successfully.
+INFO 2026-04-06 12:25:33,537 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:25:33,623 sns_service SNS service initialized successfully.
+INFO 2026-04-06 12:25:33,714 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:33,801 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:25:33,893 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:25:34,037 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:25:34,148 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:44:01,598 autoreload Watching for file changes with StatReloader
+INFO 2026-04-06 12:44:02,962 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:44:03,190 s3_service S3 service initialized successfully.
+INFO 2026-04-06 12:44:03,336 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:44:03,505 sns_service SNS service initialized successfully.
+INFO 2026-04-06 12:44:03,686 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:44:03,794 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:44:03,901 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:44:04,055 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:44:04,186 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:44:27,822 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 12:44:28,962 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 12:44:29,079 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-06 12:44:29,306 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 12:44:29,519 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-06 12:44:29,743 stock_api Fetched META from Finnhub.
+INFO 2026-04-06 12:44:29,956 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 12:44:30,173 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 12:44:30,293 stock_api Fetched V from Alpha Vantage.
+INFO 2026-04-06 12:44:30,504 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-06 12:44:30,727 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-06 12:44:30,941 stock_api Fetched NFLX from Finnhub.
+ERROR 2026-04-06 12:44:32,011 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:44:32,108 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:44:32,206 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+WARNING 2026-04-06 12:44:33,842 log Not Found: /favicon.ico
+ERROR 2026-04-06 12:45:19,438 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:19,537 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:19,636 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+INFO 2026-04-06 12:45:19,791 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 12:45:20,388 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 12:45:20,613 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-06 12:45:20,831 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 12:45:20,952 stock_api Fetched TSLA from Alpha Vantage.
+INFO 2026-04-06 12:45:21,169 stock_api Fetched META from Finnhub.
+INFO 2026-04-06 12:45:21,383 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 12:45:21,600 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 12:45:21,901 stock_api Fetched V from Finnhub.
+INFO 2026-04-06 12:45:22,021 stock_api Fetched WMT from Alpha Vantage.
+INFO 2026-04-06 12:45:22,319 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-06 12:45:22,730 stock_api Fetched NFLX from Finnhub.
+ERROR 2026-04-06 12:45:22,847 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:22,942 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:23,038 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+INFO 2026-04-06 12:45:48,546 stock_api Fetched TSLA from Alpha Vantage.
+WARNING 2026-04-06 12:45:48,658 stock_api Using demo history for TSLA.
+ERROR 2026-04-06 12:45:50,422 dynamodb_service Error putting item into 'stock_data': An error occurred (ExpiredTokenException) when calling the PutItem operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:54,395 sqs_service Error creating SQS queue: An error occurred (ExpiredToken) when calling the CreateQueue operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:56,435 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:56,547 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:56,657 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:56,661 producer Failed to send stock update event for TSLA
+ERROR 2026-04-06 12:45:58,555 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:58,653 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:45:58,751 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:00,867 dynamodb_service Error putting item into 'analytics_results': An error occurred (ExpiredTokenException) when calling the PutItem operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:02,902 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:03,002 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:03,102 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+INFO 2026-04-06 12:46:25,118 stock_api Fetched NFLX from Alpha Vantage.
+WARNING 2026-04-06 12:46:25,239 stock_api Using demo history for NFLX.
+ERROR 2026-04-06 12:46:25,361 dynamodb_service Error putting item into 'stock_data': An error occurred (ExpiredTokenException) when calling the PutItem operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:29,080 sqs_service Error creating SQS queue: An error occurred (ExpiredToken) when calling the CreateQueue operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:30,898 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:30,996 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:31,099 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:31,100 producer Failed to send stock update event for NFLX
+ERROR 2026-04-06 12:46:32,031 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:32,127 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:32,226 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:32,338 dynamodb_service Error putting item into 'analytics_results': An error occurred (ExpiredTokenException) when calling the PutItem operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:33,247 cloudwatch_service Error creating log group: An error occurred (ExpiredTokenException) when calling the CreateLogGroup operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:33,344 cloudwatch_service Error creating log stream: An error occurred (ExpiredTokenException) when calling the CreateLogStream operation: The security token included in the request is expired
+ERROR 2026-04-06 12:46:33,440 cloudwatch_service Error putting log events: An error occurred (ExpiredTokenException) when calling the PutLogEvents operation: The security token included in the request is expired
+INFO 2026-04-06 12:57:48,570 autoreload Watching for file changes with StatReloader
+INFO 2026-04-06 12:57:49,592 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:57:49,776 s3_service S3 service initialized successfully.
+INFO 2026-04-06 12:57:49,892 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:57:50,008 sns_service SNS service initialized successfully.
+INFO 2026-04-06 12:57:50,114 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:57:50,221 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 12:57:50,329 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:57:50,491 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 12:57:50,618 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 12:58:07,002 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 12:58:08,795 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 12:58:08,915 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-06 12:58:09,130 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 12:58:09,341 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-06 12:58:09,556 stock_api Fetched META from Finnhub.
+INFO 2026-04-06 12:58:09,774 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 12:58:09,986 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 12:58:10,104 stock_api Fetched V from Alpha Vantage.
+INFO 2026-04-06 12:58:10,320 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-06 12:58:10,534 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-06 12:58:10,743 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-06 12:58:12,884 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 12:58:13,121 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 13:02:58,075 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 13:02:58,352 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 13:02:58,582 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-06 13:02:58,796 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 13:02:59,196 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-06 13:02:59,316 stock_api Fetched META from Alpha Vantage.
+INFO 2026-04-06 13:02:59,679 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 13:03:00,041 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 13:03:00,299 stock_api Fetched V from Finnhub.
+INFO 2026-04-06 13:03:00,417 stock_api Fetched WMT from Alpha Vantage.
+INFO 2026-04-06 13:03:00,700 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-06 13:03:01,278 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-06 13:03:03,233 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:03:03,463 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 13:03:10,549 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 13:03:10,766 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 13:03:11,017 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-06 13:03:11,237 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 13:03:11,507 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-06 13:03:11,629 stock_api Fetched META from Alpha Vantage.
+INFO 2026-04-06 13:03:11,877 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 13:03:12,129 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 13:03:12,349 stock_api Fetched V from Finnhub.
+INFO 2026-04-06 13:03:12,576 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-06 13:03:12,703 stock_api Fetched DIS from Alpha Vantage.
+INFO 2026-04-06 13:03:13,158 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-06 13:03:15,142 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:03:15,355 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 13:03:29,733 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 13:03:29,969 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 13:03:30,308 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-06 13:03:30,533 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 13:03:30,748 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-06 13:03:30,933 stock_api Fetched META from Alpha Vantage.
+INFO 2026-04-06 13:03:31,152 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 13:03:31,367 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 13:03:31,586 stock_api Fetched V from Finnhub.
+INFO 2026-04-06 13:03:31,799 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-06 13:03:31,917 stock_api Fetched DIS from Alpha Vantage.
+INFO 2026-04-06 13:03:32,136 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-06 13:03:33,950 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:03:34,349 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 13:03:39,189 stock_api Fetched DIS from Alpha Vantage.
+WARNING 2026-04-06 13:03:39,300 stock_api Using demo history for DIS.
+INFO 2026-04-06 13:03:41,058 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-06 13:03:43,308 sqs_service SQS message sent: STOCK_UPDATE (ID: b366a671-45b0-424b-9bb9-5f31f1b658d2)
+INFO 2026-04-06 13:03:45,319 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:03:45,557 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-06 13:03:45,559 producer Stock update event sent for DIS
+INFO 2026-04-06 13:03:47,515 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:03:47,748 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-06 13:03:49,610 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-06 13:03:51,570 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:03:51,793 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 13:03:59,680 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:03:59,894 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 13:04:00,042 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 13:04:00,564 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 13:04:00,781 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-06 13:04:01,073 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 13:04:01,193 stock_api Fetched TSLA from Alpha Vantage.
+INFO 2026-04-06 13:04:01,409 stock_api Fetched META from Finnhub.
+INFO 2026-04-06 13:04:01,634 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 13:04:01,884 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 13:04:02,107 stock_api Fetched V from Finnhub.
+INFO 2026-04-06 13:04:02,227 stock_api Fetched WMT from Alpha Vantage.
+INFO 2026-04-06 13:04:02,443 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-06 13:04:02,655 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-06 13:04:02,771 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-06 13:04:02,975 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-06 17:34:55,581 autoreload Watching for file changes with StatReloader
+INFO 2026-04-06 17:34:57,393 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 17:34:57,611 s3_service S3 service initialized successfully.
+INFO 2026-04-06 17:34:57,745 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 17:34:57,886 sns_service SNS service initialized successfully.
+INFO 2026-04-06 17:34:58,031 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 17:34:58,149 sqs_service SQS service initialized successfully.
+INFO 2026-04-06 17:34:58,336 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 17:34:58,540 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-06 17:34:58,672 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-06 17:35:08,704 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-06 17:35:11,179 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-06 17:35:11,600 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-06 17:35:12,116 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-06 17:35:12,399 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-06 17:35:12,771 stock_api Fetched META from Finnhub.
+INFO 2026-04-06 17:35:13,126 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-06 17:35:13,362 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-06 17:35:13,647 stock_api Fetched V from Finnhub.
+INFO 2026-04-06 17:35:13,951 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-06 17:35:14,341 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-06 17:35:14,981 stock_api Fetched NFLX from Finnhub.
+ERROR 2026-04-06 17:35:18,091 cloudwatch_service Error creating log group: An error occurred (AccessDeniedException) when calling the CreateLogGroup operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: logs:CreateLogGroup on resource: arn:aws:logs:us-east-1:669473726067:log-group:stock-platform-logs:log-stream: with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+ERROR 2026-04-06 17:35:18,263 cloudwatch_service Error creating log stream: An error occurred (AccessDeniedException) when calling the CreateLogStream operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: logs:CreateLogStream on resource: arn:aws:logs:us-east-1:669473726067:log-group:stock-platform-logs:log-stream:system-events with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+ERROR 2026-04-06 17:35:18,443 cloudwatch_service Error putting log events: An error occurred (AccessDeniedException) when calling the PutLogEvents operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: logs:PutLogEvents on resource: arn:aws:logs:us-east-1:669473726067:log-group:stock-platform-logs:log-stream:system-events with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+WARNING 2026-04-06 17:35:19,201 log Not Found: /favicon.ico
+INFO 2026-04-07 16:00:28,734 autoreload Watching for file changes with StatReloader
+INFO 2026-04-07 16:00:32,821 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-07 16:00:33,192 s3_service S3 service initialized successfully.
+INFO 2026-04-07 16:00:33,348 sqs_service SQS service initialized successfully.
+INFO 2026-04-07 16:00:33,500 sns_service SNS service initialized successfully.
+INFO 2026-04-07 16:00:33,704 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-07 16:00:33,852 sqs_service SQS service initialized successfully.
+INFO 2026-04-07 16:00:34,010 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-07 16:00:34,158 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-07 16:00:34,295 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-07 16:00:44,301 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-07 16:00:46,428 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-07 16:00:46,551 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-07 16:00:46,796 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-07 16:00:47,094 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-07 16:00:47,536 stock_api Fetched META from Finnhub.
+INFO 2026-04-07 16:00:47,664 stock_api Fetched NVDA from Alpha Vantage.
+INFO 2026-04-07 16:00:48,007 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-07 16:00:48,233 stock_api Fetched V from Finnhub.
+INFO 2026-04-07 16:00:48,478 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-07 16:00:48,737 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-07 16:00:48,856 stock_api Fetched NFLX from Alpha Vantage.
+INFO 2026-04-07 16:00:50,981 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:00:51,217 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-07 16:00:52,178 log Not Found: /favicon.ico
+INFO 2026-04-07 16:00:52,716 stock_api Fetched TSLA from Alpha Vantage.
+WARNING 2026-04-07 16:00:52,825 stock_api Using demo history for TSLA.
+INFO 2026-04-07 16:00:54,872 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-07 16:00:57,265 sqs_service SQS message sent: STOCK_UPDATE (ID: 58b48dc8-9cdc-44db-b893-8505d0510d68)
+INFO 2026-04-07 16:00:59,466 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:00:59,689 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-07 16:00:59,691 producer Stock update event sent for TSLA
+INFO 2026-04-07 16:01:01,860 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:01:02,080 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-07 16:01:04,259 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-07 16:01:06,350 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:01:06,567 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-07 16:02:49,973 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\api\stock_api.py changed, reloading.
+INFO 2026-04-07 16:02:51,772 autoreload Watching for file changes with StatReloader
+INFO 2026-04-07 16:03:04,490 autoreload C:\Users\kumar\Desktop\stockanalysis\stocks\api\stock_api.py changed, reloading.
+INFO 2026-04-07 16:03:05,270 autoreload Watching for file changes with StatReloader
+INFO 2026-04-07 16:03:06,291 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-07 16:03:06,467 s3_service S3 service initialized successfully.
+INFO 2026-04-07 16:03:06,570 sqs_service SQS service initialized successfully.
+INFO 2026-04-07 16:03:06,667 sns_service SNS service initialized successfully.
+INFO 2026-04-07 16:03:06,840 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-07 16:03:06,942 sqs_service SQS service initialized successfully.
+INFO 2026-04-07 16:03:07,082 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-07 16:03:07,239 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-07 16:03:07,348 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-07 16:05:24,781 stock_api Fetched TSLA from Alpha Vantage.
+WARNING 2026-04-07 16:05:24,891 stock_api Using demo history for TSLA.
+INFO 2026-04-07 16:05:26,188 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-07 16:05:28,212 dynamodb_service Item stored in 'stock_data': ['symbol', 'timestamp', 'price', 'volume', 'change_percent']
+INFO 2026-04-07 16:05:28,701 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-07 16:05:28,820 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-07 16:05:29,119 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-07 16:05:29,348 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-07 16:05:29,644 stock_api Fetched META from Finnhub.
+INFO 2026-04-07 16:05:29,873 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-07 16:05:29,989 stock_api Fetched JPM from Alpha Vantage.
+INFO 2026-04-07 16:05:30,199 sqs_service SQS message sent: STOCK_UPDATE (ID: eb8d0714-ebe3-44a1-9351-061abe269955)
+INFO 2026-04-07 16:05:30,212 stock_api Fetched V from Finnhub.
+INFO 2026-04-07 16:05:30,439 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-07 16:05:30,767 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-07 16:05:31,186 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-07 16:05:32,189 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:05:32,449 cloudwatch_service Logged 1 event(s) to 'sqs-events'.
+INFO 2026-04-07 16:05:32,450 producer Stock update event sent for TSLA
+INFO 2026-04-07 16:05:33,193 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:05:33,410 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-07 16:05:34,361 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:05:34,672 cloudwatch_service Logged 1 event(s) to 'stock-fetches'.
+INFO 2026-04-07 16:05:36,953 dynamodb_service Item stored in 'analytics_results': ['symbol', 'analysis_type', 'result_data', 'computed_at']
+INFO 2026-04-07 16:05:38,795 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:05:39,016 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-07 16:05:42,699 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-07 16:05:42,947 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-07 16:05:43,254 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-07 16:05:43,499 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-07 16:05:43,779 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-07 16:05:43,897 stock_api Fetched META from Alpha Vantage.
+INFO 2026-04-07 16:05:44,161 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-07 16:05:44,386 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-07 16:05:44,632 stock_api Fetched V from Finnhub.
+INFO 2026-04-07 16:05:44,881 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-07 16:05:45,003 stock_api Fetched DIS from Alpha Vantage.
+INFO 2026-04-07 16:05:45,350 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-07 16:05:47,335 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:05:47,516 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-07 16:05:47,553 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-07 16:05:47,734 stock_api Fetched GOOGL from Finnhub.
+WARNING 2026-04-07 16:05:47,879 log Not Found: /favicon.ico
+INFO 2026-04-07 16:05:47,949 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-07 16:05:48,196 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-07 16:05:48,478 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-07 16:05:48,610 stock_api Fetched META from Alpha Vantage.
+INFO 2026-04-07 16:05:48,901 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-07 16:05:49,174 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-07 16:05:49,515 stock_api Fetched V from Finnhub.
+INFO 2026-04-07 16:05:49,642 stock_api Fetched WMT from Alpha Vantage.
+INFO 2026-04-07 16:05:49,902 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-07 16:05:50,135 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-07 16:05:50,243 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:05:50,457 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-07 16:05:50,752 stock_api Fetched AAPL from Finnhub.
+INFO 2026-04-07 16:05:50,871 stock_api Fetched GOOGL from Alpha Vantage.
+INFO 2026-04-07 16:05:51,106 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-07 16:05:51,400 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-07 16:05:52,099 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-07 16:05:52,220 stock_api Fetched META from Alpha Vantage.
+INFO 2026-04-07 16:05:52,475 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-07 16:05:52,702 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-07 16:05:52,953 stock_api Fetched V from Finnhub.
+INFO 2026-04-07 16:05:53,209 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-07 16:05:53,330 stock_api Fetched DIS from Alpha Vantage.
+INFO 2026-04-07 16:05:53,544 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-07 16:05:53,667 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:05:53,893 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-07 16:20:37,376 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-07 16:20:45,189 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-07 16:20:45,403 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-07 16:20:45,946 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-07 16:20:46,556 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-07 16:20:46,697 stock_api Fetched META from Alpha Vantage.
+INFO 2026-04-07 16:20:47,182 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-07 16:20:47,626 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-07 16:20:47,799 stock_api Fetched V from Alpha Vantage.
+INFO 2026-04-07 16:20:48,327 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-07 16:20:49,021 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-07 16:20:49,341 stock_api Fetched NFLX from Alpha Vantage.
+INFO 2026-04-07 16:20:53,601 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-07 16:20:53,902 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-09 15:52:53,244 autoreload Watching for file changes with StatReloader
+INFO 2026-04-09 15:52:56,371 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-09 15:52:56,599 s3_service S3 service initialized successfully.
+INFO 2026-04-09 15:52:56,784 sqs_service SQS service initialized successfully.
+INFO 2026-04-09 15:52:56,952 sns_service SNS service initialized successfully.
+INFO 2026-04-09 15:52:57,117 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-09 15:52:57,253 sqs_service SQS service initialized successfully.
+INFO 2026-04-09 15:52:57,450 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-09 15:52:57,617 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-09 15:52:57,755 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-09 15:53:12,046 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-09 15:53:14,076 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-09 15:53:14,216 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-09 15:53:14,502 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-09 15:53:14,795 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-09 15:53:15,110 stock_api Fetched META from Finnhub.
+INFO 2026-04-09 15:53:15,263 stock_api Fetched NVDA from Alpha Vantage.
+INFO 2026-04-09 15:53:15,554 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-09 15:53:15,853 stock_api Fetched V from Finnhub.
+INFO 2026-04-09 15:53:16,324 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-09 15:53:16,479 stock_api Fetched DIS from Alpha Vantage.
+INFO 2026-04-09 15:53:16,797 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-09 15:53:18,564 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-09 15:53:18,877 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-09 15:53:20,431 log Not Found: /favicon.ico

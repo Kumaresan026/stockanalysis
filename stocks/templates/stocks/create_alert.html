@@ -1,0 +1,66 @@
+{% extends 'stocks/base.html' %}
+
+{% block title %}Create Alert{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card bg-dark border-secondary">
+            <div class="card-header bg-transparent border-secondary">
+                <h4 class="mb-0"><i class="bi bi-bell-fill me-2 text-warning"></i>Create Price Alert</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{% url 'create_alert' %}">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="id_symbol" class="form-label">Stock Symbol</label>
+                        {{ form.symbol }}
+                        <small class="form-text text-muted">Enter the stock ticker symbol (e.g., AAPL, GOOGL)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_condition" class="form-label">Condition</label>
+                        {{ form.condition }}
+                        <small class="form-text text-muted">When should the alert trigger?</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_threshold" class="form-label">Threshold Value</label>
+                        {{ form.threshold }}
+                        <small class="form-text text-muted">The price or value that triggers the alert</small>
+                    </div>
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <p class="mb-0"><strong>{{ field }}:</strong> {{ error }}</p>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-bell me-1"></i> Create Alert
+                        </button>
+                        <a href="{% url 'alerts' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+
+                <div class="mt-4 p-3 rounded bg-black bg-opacity-25">
+                    <h6 class="text-info"><i class="bi bi-info-circle me-1"></i> How Alerts Work</h6>
+                    <ol class="small text-muted mb-0">
+                        <li>Alert rule is stored in DynamoDB</li>
+                        <li>Event sent to SQS queue</li>
+                        <li>Lambda evaluates alert conditions</li>
+                        <li>SNS sends email notification if triggered</li>
+                        <li>All activity logged in CloudWatch</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

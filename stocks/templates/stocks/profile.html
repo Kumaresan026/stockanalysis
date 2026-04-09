@@ -1,0 +1,80 @@
+{% extends 'stocks/base.html' %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Profile Info -->
+    <div class="col-md-4 mb-4">
+        <div class="card bg-dark border-secondary">
+            <div class="card-body text-center p-4">
+                <div class="bg-primary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-person fs-1 text-primary"></i>
+                </div>
+                <h4 class="fw-bold">{{ user.get_full_name|default:user.username }}</h4>
+                <p class="text-muted mb-1">@{{ user.username }}</p>
+                <span class="badge bg-{% if profile.is_admin %}warning{% else %}primary{% endif %}">
+                    {{ profile.get_role_display }}
+                </span>
+                <hr class="border-secondary my-3">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h5 class="fw-bold mb-0">{{ watchlist_count }}</h5>
+                        <small class="text-muted">Watchlist</small>
+                    </div>
+                    <div class="col-4">
+                        <h5 class="fw-bold mb-0">{{ alert_count }}</h5>
+                        <small class="text-muted">Alerts</small>
+                    </div>
+                    <div class="col-4">
+                        <h5 class="fw-bold mb-0 text-success">{{ active_alerts }}</h5>
+                        <small class="text-muted">Active</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile -->
+    <div class="col-md-8 mb-4">
+        <div class="card bg-dark border-secondary">
+            <div class="card-header bg-transparent border-secondary">
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Edit Profile</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{% url 'profile' %}">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control bg-dark border-secondary text-light"
+                               value="{{ user.email }}" disabled>
+                        <small class="form-text text-muted">Contact admin to change email</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_bio" class="form-label">Bio</label>
+                        {{ form.bio }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_phone" class="form-label">Phone</label>
+                        {{ form.phone }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_notification_email" class="form-label">Notification Email</label>
+                        {{ form.notification_email }}
+                        <small class="form-text text-muted">Used for SNS alert notifications (leave blank to use primary email)</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

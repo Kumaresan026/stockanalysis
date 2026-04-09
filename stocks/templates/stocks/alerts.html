@@ -1,0 +1,79 @@
+{% extends 'stocks/base.html' %}
+
+{% block title %}My Alerts{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-bell me-2 text-warning"></i>My Alerts</h2>
+    <a href="{% url 'create_alert' %}" class="btn btn-warning btn-sm">
+        <i class="bi bi-plus-lg me-1"></i> Create Alert
+    </a>
+</div>
+
+{% if alerts %}
+<div class="table-responsive">
+    <table class="table table-dark table-hover align-middle">
+        <thead>
+            <tr class="text-muted small">
+                <th>Stock</th>
+                <th>Condition</th>
+                <th class="text-end">Threshold</th>
+                <th class="text-center">Status</th>
+                <th class="text-end">Created</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in alerts %}
+            <tr>
+                <td>
+                    <a href="{% url 'stock_detail' alert.stock.symbol %}" class="text-decoration-none text-white fw-semibold">
+                        {{ alert.stock.symbol }}
+                    </a>
+                </td>
+                <td>
+                    {% if alert.condition == 'PRICE_ABOVE' %}
+                    <i class="bi bi-arrow-up-circle text-success me-1"></i> Price Above
+                    {% elif alert.condition == 'PRICE_BELOW' %}
+                    <i class="bi bi-arrow-down-circle text-danger me-1"></i> Price Below
+                    {% elif alert.condition == 'VOLUME_ABOVE' %}
+                    <i class="bi bi-bar-chart text-info me-1"></i> Volume Above
+                    {% elif alert.condition == 'CHANGE_ABOVE' %}
+                    <i class="bi bi-percent text-success me-1"></i> Change Above
+                    {% elif alert.condition == 'CHANGE_BELOW' %}
+                    <i class="bi bi-percent text-danger me-1"></i> Change Below
+                    {% endif %}
+                </td>
+                <td class="text-end fw-semibold">${{ alert.threshold|floatformat:2 }}</td>
+                <td class="text-center">
+                    {% if alert.status == 'active' %}
+                    <span class="badge bg-success">Active</span>
+                    {% elif alert.status == 'triggered' %}
+                    <span class="badge bg-warning text-dark">Triggered</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Disabled</span>
+                    {% endif %}
+                </td>
+                <td class="text-end text-muted small">{{ alert.created_at|date:"M d, Y" }}</td>
+                <td class="text-center">
+                    <a href="{% url 'delete_alert' alert.id %}" class="btn btn-outline-danger btn-sm"
+                       onclick="return confirm('Delete this alert?');">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-bell-slash fs-1 text-muted d-block mb-3"></i>
+    <h5 class="text-muted">No alerts set</h5>
+    <p class="text-muted">Create alerts to get notified when stocks hit your price targets.</p>
+    <a href="{% url 'create_alert' %}" class="btn btn-warning">
+        <i class="bi bi-plus-lg me-1"></i> Create Your First Alert
+    </a>
+</div>
+{% endif %}
+{% endblock %}
