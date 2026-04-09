@@ -34,8 +34,8 @@ jobs:
 
       - name: Deploy to Elastic Beanstalk
         run: |
-          eb init movieticket \
+          eb init stockanalysis \
             --region us-east-1 \
             --platform "Python 3.9"
-          eb use movieticket-env
+          eb use stockanalysis-env
           eb deploy
