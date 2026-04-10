@@ -189,14 +189,22 @@ class StockAPIService:
     def _get_demo_data(self, symbol: str) -> Dict[str, Any]:
         """Return demo data when no API keys are configured."""
         import random
+        import hashlib
+        
+        # Use a localized seed based on symbol and current hour to keep values stable
+        # on page refreshes while allowing them to change occasionally
+        seed_str = f"{symbol.upper()}_{datetime.utcnow().strftime('%Y%m%d%H')}"
+        seed = int(hashlib.md5(seed_str.encode()).hexdigest(), 16)
+        rng = random.Random(seed)
+
         base_prices = {
             'AAPL': 178.50, 'GOOGL': 141.80, 'MSFT': 378.90,
             'AMZN': 178.25, 'TSLA': 248.50, 'META': 390.10,
             'NVDA': 875.30, 'JPM': 195.40, 'V': 280.60,
             'WMT': 165.20, 'DIS': 112.40, 'NFLX': 605.80,
         }
-        base = base_prices.get(symbol.upper(), 100 + random.random() * 200)
-        variation = base * (random.uniform(-0.03, 0.03))
+        base = base_prices.get(symbol.upper(), 100 + rng.random() * 200)
+        variation = base * (rng.uniform(-0.03, 0.03))
         price = round(base + variation, 2)
         change = round(variation, 2)
         change_pct = round((variation / base) * 100, 2)
@@ -204,13 +212,13 @@ class StockAPIService:
         data = {
             'symbol': symbol.upper(),
             'price': price,
-            'volume': random.randint(1_000_000, 50_000_000),
+            'volume': rng.randint(1_000_000, 50_000_000),
             'change': change,
             'change_percent': change_pct,
             'previous_close': round(base, 2),
-            'open': round(base + random.uniform(-2, 2), 2),
-            'high': round(price + random.uniform(0, 5), 2),
-            'low': round(price - random.uniform(0, 5), 2),
+            'open': round(base + rng.uniform(-2, 2), 2),
+            'high': round(price + rng.uniform(0, 5), 2),
+            'low': round(price - rng.uniform(0, 5), 2),
             'source': 'demo',
             'timestamp': datetime.utcnow().isoformat(),
         }
@@ -221,13 +229,18 @@ class StockAPIService:
     def _get_demo_history(self, symbol: str, days: int = 90) -> List[Dict]:
         """Generate demo historical data."""
         import random
+        import hashlib
         from datetime import timedelta
+
+        seed_str = f"{symbol.upper()}_history_{datetime.utcnow().strftime('%Y%m%d')}"
+        seed = int(hashlib.md5(seed_str.encode()).hexdigest(), 16)
+        rng = random.Random(seed)
 
         base_prices = {
             'AAPL': 170, 'GOOGL': 135, 'MSFT': 370, 'AMZN': 170,
             'TSLA': 240, 'META': 380, 'NVDA': 800, 'JPM': 190,
         }
-        price = base_prices.get(symbol.upper(), 100 + random.random() * 100)
+        price = base_prices.get(symbol.upper(), 100 + rng.random() * 100)
         history = []
         start_date = datetime.utcnow() - timedelta(days=days)
 
@@ -235,16 +248,16 @@ class StockAPIService:
             date = start_date + timedelta(days=i)
             if date.weekday() >= 5:  # Skip weekends
                 continue
-            change = price * random.uniform(-0.025, 0.025)
+            change = price * rng.uniform(-0.025, 0.025)
             price += change
             price = max(price, 10)
             history.append({
                 'date': date.strftime('%Y-%m-%d'),
-                'open': round(price - random.uniform(0, 2), 2),
-                'high': round(price + random.uniform(0, 3), 2),
-                'low': round(price - random.uniform(0, 3), 2),
+                'open': round(price - rng.uniform(0, 2), 2),
+                'high': round(price + rng.uniform(0, 3), 2),
+                'low': round(price - rng.uniform(0, 3), 2),
                 'close': round(price, 2),
-                'volume': random.randint(1_000_000, 50_000_000),
+                'volume': rng.randint(1_000_000, 50_000_000),
             })
         return history
 
