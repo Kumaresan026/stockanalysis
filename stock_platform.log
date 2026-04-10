@@ -905,3 +905,12 @@ INFO 2026-04-09 15:53:16,797 stock_api Fetched NFLX from Finnhub.
 INFO 2026-04-09 15:53:18,564 cloudwatch_service Log group 'stock-platform-logs' already exists.
 INFO 2026-04-09 15:53:18,877 cloudwatch_service Logged 1 event(s) to 'system-events'.
 WARNING 2026-04-09 15:53:20,431 log Not Found: /favicon.ico
+INFO 2026-04-10 17:06:15,945 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-10 17:06:16,312 s3_service S3 service initialized successfully.
+INFO 2026-04-10 17:06:16,576 sqs_service SQS service initialized successfully.
+INFO 2026-04-10 17:06:16,804 sns_service SNS service initialized successfully.
+INFO 2026-04-10 17:06:17,012 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-10 17:06:17,158 sqs_service SQS service initialized successfully.
+INFO 2026-04-10 17:06:17,347 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-10 17:06:17,548 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-10 17:06:17,693 cloudwatch_service CloudWatch service initialized successfully.
