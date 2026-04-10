@@ -12,3 +12,6 @@ chmod 664 /var/app/current/stock_platform.log || true
 
 # Also ensure the directory is writable by webapp for SQLite lock files
 chown webapp:webapp /var/app/current || true
+
+# Trigger deployment
+
