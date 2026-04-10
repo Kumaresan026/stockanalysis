@@ -1156,3 +1156,13 @@ INFO 2026-04-10 20:56:47,896 stock_api Fetched DIS from Alpha Vantage.
 INFO 2026-04-10 20:56:48,176 stock_api Fetched NFLX from Finnhub.
 INFO 2026-04-10 20:56:50,981 cloudwatch_service Log group 'stock-platform-logs' already exists.
 INFO 2026-04-10 20:56:51,269 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-10 21:55:19,838 autoreload Watching for file changes with StatReloader
+INFO 2026-04-10 21:55:22,155 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-10 21:55:22,469 s3_service S3 service initialized successfully.
+INFO 2026-04-10 21:55:22,645 sqs_service SQS service initialized successfully.
+INFO 2026-04-10 21:55:22,804 sns_service SNS service initialized successfully.
+INFO 2026-04-10 21:55:23,041 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-10 21:55:23,166 sqs_service SQS service initialized successfully.
+INFO 2026-04-10 21:55:23,308 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-10 21:55:23,510 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-10 21:55:23,710 cloudwatch_service CloudWatch service initialized successfully.
