@@ -28,13 +28,32 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Starting SQS Poller... Press Ctrl+C to stop."))
         
         sqs = SQSService()
-        if not sqs.available:
-            self.stdout.write(self.style.ERROR("SQS not available or missing credentials. Poller exiting."))
-            return
+        
+        # Setup graceful shutdown
+        self.running = True
+        def handle_sigint(signum, frame):
+            self.stdout.write(self.style.WARNING("\nStopping SQS Poller gracefully..."))
+            self.running = False
+        signal.signal(signal.SIGINT, handle_sigint)
+        signal.signal(signal.SIGTERM, handle_sigint)
 
-        queue_url = sqs.get_queue_url()
-        if not queue_url:
-            self.stdout.write(self.style.ERROR("SQS Queue not found. Poller exiting."))
+        # Instead of exiting if SQS is unavailable (which crashes the EB deployment), 
+        # we will wait for credentials to be provided.
+        queue_url = None
+        while self.running and not queue_url:
+            if not sqs.available:
+                self.stdout.write(self.style.ERROR("SQS not available. Waiting 30s..."))
+            else:
+                queue_url = sqs.get_queue_url()
+                if not queue_url:
+                    self.stdout.write(self.style.ERROR("SQS Queue not found (bad credentials?). Waiting 30s..."))
+            
+            if not queue_url:
+                time.sleep(30)
+                # Re-initialize to pickup potentially new env vars (though systemd restart is usually needed)
+                sqs = SQSService()
+
+        if not self.running:
             return
 
         self.stdout.write(self.style.SUCCESS(f"Listening on queue: {queue_url}"))
