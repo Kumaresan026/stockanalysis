@@ -969,3 +969,108 @@ INFO 2026-04-10 20:11:36,687 sqs_service SQS service initialized successfully.
 ERROR 2026-04-10 20:11:37,761 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
 INFO 2026-04-10 20:12:07,885 sqs_service SQS service initialized successfully.
 ERROR 2026-04-10 20:12:08,973 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:12:39,111 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:12:40,219 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:13:10,321 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:13:11,329 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:13:41,449 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:13:42,512 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:14:12,668 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:14:13,696 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:14:43,788 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:14:44,853 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:15:14,946 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:15:15,992 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:15:46,112 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:15:47,151 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:16:17,248 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:16:18,285 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:16:48,377 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:16:49,406 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:17:19,804 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:17:21,933 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:17:52,246 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:17:54,185 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:18:24,304 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:18:25,453 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:18:55,773 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:18:57,705 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:19:27,821 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:19:28,840 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:19:52,218 autoreload Watching for file changes with StatReloader
+INFO 2026-04-10 20:19:53,414 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-10 20:19:53,633 s3_service S3 service initialized successfully.
+INFO 2026-04-10 20:19:53,727 sqs_service SQS service initialized successfully.
+INFO 2026-04-10 20:19:53,820 sns_service SNS service initialized successfully.
+INFO 2026-04-10 20:19:53,925 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-10 20:19:54,030 sqs_service SQS service initialized successfully.
+INFO 2026-04-10 20:19:54,129 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-10 20:19:54,270 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-10 20:19:54,396 cloudwatch_service CloudWatch service initialized successfully.
+INFO 2026-04-10 20:19:58,962 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:20:00,148 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:20:14,489 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-10 20:20:16,244 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-10 20:20:16,364 stock_api Fetched MSFT from Alpha Vantage.
+INFO 2026-04-10 20:20:16,657 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-10 20:20:16,923 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-10 20:20:17,234 stock_api Fetched META from Finnhub.
+INFO 2026-04-10 20:20:17,588 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-10 20:20:17,709 stock_api Fetched JPM from Alpha Vantage.
+INFO 2026-04-10 20:20:18,054 stock_api Fetched V from Finnhub.
+INFO 2026-04-10 20:20:18,450 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-10 20:20:18,663 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-10 20:20:18,785 stock_api Fetched NFLX from Alpha Vantage.
+INFO 2026-04-10 20:20:20,573 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-10 20:20:20,810 cloudwatch_service Logged 1 event(s) to 'system-events'.
+WARNING 2026-04-10 20:20:22,278 log Not Found: /favicon.ico
+INFO 2026-04-10 20:20:26,662 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-10 20:20:26,958 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-10 20:20:27,404 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-10 20:20:27,655 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-10 20:20:27,778 stock_api Fetched TSLA from Alpha Vantage.
+INFO 2026-04-10 20:20:27,994 stock_api Fetched META from Finnhub.
+INFO 2026-04-10 20:20:28,217 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-10 20:20:28,435 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-10 20:20:28,684 stock_api Fetched V from Finnhub.
+INFO 2026-04-10 20:20:28,806 stock_api Fetched WMT from Alpha Vantage.
+INFO 2026-04-10 20:20:29,147 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-10 20:20:29,440 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-10 20:20:31,349 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-10 20:20:31,566 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-10 20:20:32,380 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:20:34,339 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:20:35,035 stock_api Fetched AAPL from Alpha Vantage.
+INFO 2026-04-10 20:20:35,361 stock_api Fetched GOOGL from Finnhub.
+INFO 2026-04-10 20:20:35,746 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-10 20:20:35,981 stock_api Fetched AMZN from Finnhub.
+INFO 2026-04-10 20:20:36,101 stock_api Fetched TSLA from Alpha Vantage.
+INFO 2026-04-10 20:20:36,321 stock_api Fetched META from Finnhub.
+INFO 2026-04-10 20:20:36,576 stock_api Fetched NVDA from Finnhub.
+INFO 2026-04-10 20:20:36,798 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-10 20:20:37,043 stock_api Fetched V from Finnhub.
+INFO 2026-04-10 20:20:37,166 stock_api Fetched WMT from Alpha Vantage.
+INFO 2026-04-10 20:20:37,487 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-10 20:20:37,750 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-10 20:20:39,549 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-10 20:20:39,766 cloudwatch_service Logged 1 event(s) to 'system-events'.
+INFO 2026-04-10 20:21:04,601 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:21:06,471 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:21:36,569 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:21:37,597 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:22:07,753 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:22:08,753 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:22:38,851 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:22:39,950 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:23:10,058 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:23:11,178 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:23:41,390 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:23:42,524 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:24:12,726 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:24:13,879 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:24:44,009 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:24:45,213 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:25:15,370 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:25:16,413 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
+INFO 2026-04-10 20:25:46,535 sqs_service SQS service initialized successfully.
+ERROR 2026-04-10 20:25:47,598 sqs_service Error creating SQS queue: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:669473726067:stock-events-queue with an explicit deny in an identity-based policy: arn:aws:iam::669473726067:policy/voc-cancel-cred
