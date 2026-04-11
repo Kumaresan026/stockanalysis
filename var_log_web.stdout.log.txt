@@ -1,0 +1,48 @@
+ents operation: The security token included in the request is invalid.
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]: ERROR 2026-04-11 10:25:41,715 log Internal Server Error: /
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]: Traceback (most recent call last):
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    response = get_response(request)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/current/stocks/views.py", line 97, in dashboard
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return render(request, 'stocks/dashboard.html', context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/shortcuts.py", line 24, in render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    content = loader.render_to_string(template_name, context, request, using=using)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/loader.py", line 62, in render_to_string
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return template.render(context, request)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self.template.render(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 175, in render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self._render(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 167, in _render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self.nodelist.render(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 1005, in render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return SafeString("".join([node.render_annotated(context) for node in self]))
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return SafeString("".join([node.render_annotated(context) for node in self]))
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self.render(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/loader_tags.py", line 157, in render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return compiled_parent._render(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 167, in _render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self.nodelist.render(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 1005, in render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return SafeString("".join([node.render_annotated(context) for node in self]))
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return SafeString("".join([node.render_annotated(context) for node in self]))
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self.render(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/templatetags/static.py", line 116, in render
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    url = self.url(context)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/templatetags/static.py", line 113, in url
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self.handle_simple(path)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/templatetags/static.py", line 129, in handle_simple
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return staticfiles_storage.url(path)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/contrib/staticfiles/storage.py", line 203, in url
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    return self._url(self.stored_name, name, force)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/contrib/staticfiles/storage.py", line 182, in _url
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    hashed_name = hashed_name_func(*args)
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:  File "/var/app/venv/staging-LQM1lest/lib64/python3.9/site-packages/django/contrib/staticfiles/storage.py", line 513, in stored_name
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]:    raise ValueError(
+Apr 11 10:25:41 ip-172-31-32-213 web[2672]: ValueError: Missing staticfiles manifest entry for 'stocks/css/style.css'

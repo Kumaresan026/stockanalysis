@@ -1,0 +1,62 @@
+026-04-10 23:09:25,158 P2343 [INFO] ------------------------------------------------------------
+2026-04-10 23:09:25,158 P2343 [INFO] Completed successfully.
+2026-04-10 23:09:25,158 P2343 [INFO] ============================================================
+2026-04-10 23:09:25,158 P2343 [INFO] yum list installed python3-devel
+2026-04-10 23:09:25,648 P2343 [INFO] -----------------------Command Output-----------------------
+2026-04-10 23:09:25,649 P2343 [INFO] 	Installed Packages
+2026-04-10 23:09:25,649 P2343 [INFO] 	python3-devel.x86_64             3.9.25-1.amzn2023.0.3              @amazonlinux
+2026-04-10 23:09:25,649 P2343 [INFO] ------------------------------------------------------------
+2026-04-10 23:09:25,649 P2343 [INFO] Completed successfully.
+2026-04-10 23:09:25,649 P2343 [INFO] ============================================================
+2026-04-10 23:09:25,649 P2343 [INFO] yum list installed gcc
+2026-04-10 23:09:25,943 P2343 [INFO] -----------------------Command Output-----------------------
+2026-04-10 23:09:25,943 P2343 [INFO] 	Installed Packages
+2026-04-10 23:09:25,943 P2343 [INFO] 	gcc.x86_64                  11.5.0-5.amzn2023.0.5                   @amazonlinux
+2026-04-10 23:09:25,944 P2343 [INFO] ------------------------------------------------------------
+2026-04-10 23:09:25,944 P2343 [INFO] Completed successfully.
+2026-04-10 23:09:25,944 P2343 [INFO] ============================================================
+2026-04-10 23:09:25,944 P2343 [INFO] Command 01_upgrade_pip
+2026-04-10 23:09:27,082 P2343 [INFO] -----------------------Command Output-----------------------
+2026-04-10 23:09:27,082 P2343 [INFO] 	Requirement already satisfied: pip in ./opt/elasticbeanstalk/site-packages (26.0.1)
+2026-04-10 23:09:27,082 P2343 [INFO] 	WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+2026-04-10 23:09:27,082 P2343 [INFO] ------------------------------------------------------------
+2026-04-10 23:09:27,083 P2343 [INFO] Completed successfully.
+2026-04-10 23:09:49,684 P2541 [INFO] ************************************************************
+2026-04-10 23:09:49,684 P2541 [INFO] ConfigSet Infra-EmbeddedPostBuild
+2026-04-10 23:09:49,687 P2541 [INFO] ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-04-10 23:09:49,687 P2541 [INFO] Config postbuild_0_stockanalysis
+2026-04-10 23:09:49,709 P2541 [INFO] ============================================================
+2026-04-10 23:09:49,709 P2541 [INFO] Command 01_install_library
+2026-04-10 23:09:52,544 P2541 [INFO] -----------------------Command Output-----------------------
+2026-04-10 23:09:52,544 P2541 [INFO] 	Obtaining file:///var/app/staging
+2026-04-10 23:09:52,544 P2541 [INFO] 	  Installing build dependencies: started
+2026-04-10 23:09:52,544 P2541 [INFO] 	  Installing build dependencies: finished with status 'done'
+2026-04-10 23:09:52,544 P2541 [INFO] 	  Checking if build backend supports build_editable: started
+2026-04-10 23:09:52,544 P2541 [INFO] 	  Checking if build backend supports build_editable: finished with status 'done'
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Getting requirements to build editable: started
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Getting requirements to build editable: finished with status 'done'
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Preparing editable metadata (pyproject.toml): started
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Preparing editable metadata (pyproject.toml): finished with status 'done'
+2026-04-10 23:09:52,545 P2541 [INFO] 	Requirement already satisfied: numpy>=1.24.0 in /var/app/venv/staging-LQM1lest/lib/python3.9/site-packages (from stock_event_engine==1.0.0) (2.0.2)
+2026-04-10 23:09:52,545 P2541 [INFO] 	Building wheels for collected packages: stock_event_engine
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Building editable for stock_event_engine (pyproject.toml): started
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Building editable for stock_event_engine (pyproject.toml): finished with status 'done'
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Created wheel for stock_event_engine: filename=stock_event_engine-1.0.0-0.editable-py3-none-any.whl size=6070 sha256=c855b335f53a29cffe5669c27f5544334c73750d16a94083bd6c68053232d82b
+2026-04-10 23:09:52,545 P2541 [INFO] 	  Stored in directory: /tmp/pip-ephem-wheel-cache-fikzitwt/wheels/a8/a6/74/37a911c5fa01c059664df7d2866c9838bf50a702643eec1ced
+2026-04-10 23:09:52,545 P2541 [INFO] 	Successfully built stock_event_engine
+2026-04-10 23:09:52,545 P2541 [INFO] 	Installing collected packages: stock_event_engine
+2026-04-10 23:09:52,545 P2541 [INFO] 	Successfully installed stock_event_engine-1.0.0
+2026-04-10 23:09:52,545 P2541 [INFO] ------------------------------------------------------------
+2026-04-10 23:09:52,545 P2541 [INFO] Completed successfully.
+2026-04-10 23:09:52,555 P2541 [INFO] ============================================================
+2026-04-10 23:09:52,555 P2541 [INFO] Test for Command 02_migrate
+2026-04-10 23:09:52,560 P2541 [ERROR] Exited with error code 1
+2026-04-10 23:09:52,569 P2541 [INFO] ============================================================
+2026-04-10 23:09:52,569 P2541 [INFO] Test for Command 03_collectstatic
+2026-04-10 23:09:52,573 P2541 [ERROR] Exited with error code 1
+2026-04-10 23:09:52,582 P2541 [INFO] ============================================================
+2026-04-10 23:09:52,582 P2541 [INFO] Test for Command 04_create_superuser
+2026-04-10 23:09:52,586 P2541 [ERROR] Exited with error code 1
+2026-04-10 23:09:52,595 P2541 [INFO] ============================================================
+2026-04-10 23:09:52,595 P2541 [INFO] Test for Command 05_init_aws_resources
+2026-04-10 23:09:52,599 P2541 [ERROR] Exited with error code 1
