@@ -1,14 +1,20 @@
 """
 Lambda Function: stock_processor
 
-Triggered by SQS events when stock data is updated.
-Processes stock data, runs analytics using stock_event_engine,
-and stores results in DynamoDB.
+Triggered automatically by SQS when stock data is updated.
 
-This function is designed to be deployed as an AWS Lambda function
-with SQS as its event trigger.
+Pipeline:
+1. Receives SQS event (STOCK_UPDATE or ANALYTICS_REQUEST)
+2. Stores raw stock data in DynamoDB (stock_data table)
+3. Runs technical analytics using stock_event_engine
+4. Uploads analytics report to S3
+5. Invokes alert_handler Lambda to evaluate active alert rules
+
+This function is deployed to AWS Lambda and uses its attached IAM role (LabRole)
+for all AWS SDK calls — no explicit credentials are needed here.
 """
 
+import boto3
 import json
 import logging
 import os
@@ -17,49 +23,50 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Any
 
-import boto3
 from botocore.exceptions import ClientError
 
-# Import stock_event_engine for analytics
-# In Lambda deployment, this must be included in the deployment package
+# Import stock_event_engine (bundled in the zip package)
 try:
     from stock_event_engine.indicators import StockAnalyzer
     from stock_event_engine.signals import SignalDetector
     from stock_event_engine.exceptions import InsufficientDataError, StockDataError
 except ImportError:
-    # Fallback for local development
     StockAnalyzer = None
     SignalDetector = None
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize AWS clients
-dynamodb = boto3.resource('dynamodb', region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
-cloudwatch_logs = boto3.client('logs', region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
-sns_client = boto3.client('sns', region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
+# ── AWS Clients ────────────────────────────────────────────────────────────────
+# When running inside Lambda, these auto-use the attached IAM role (LabRole)
+_region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name=_region)
+s3_client = boto3.client('s3', region_name=_region)
+lambda_client = boto3.client('lambda', region_name=_region)
 
+
+# ── Lambda Entry Point ─────────────────────────────────────────────────────────
 
 def lambda_handler(event, context):
     """
     Lambda entry point — triggered by SQS.
 
-    Event structure (SQS trigger):
+    SQS event structure:
     {
         "Records": [
             {
-                "body": "{\"event_type\": \"STOCK_UPDATE\", \"symbol\": \"AAPL\", \"price\": 180}",
-                ...
+                "body": '{"event_type": "STOCK_UPDATE", "symbol": "AAPL", "price": 180, ...}',
+                "messageId": "..."
             }
         ]
     }
 
     Args:
-        event: SQS event with Records array.
-        context: Lambda context object.
+        event: SQS event dict with Records array.
+        context: Lambda context object (unused).
 
     Returns:
-        Processing result dictionary.
+        Processing summary dict.
     """
     start_time = time.time()
     processed = 0
@@ -70,12 +77,12 @@ def lambda_handler(event, context):
 
     for record in event.get('Records', []):
         try:
-            # Parse the SQS message body
-            body = json.loads(record.get('body', '{}'))
+            body_raw = record.get('body', '{}')
+            body = json.loads(body_raw) if isinstance(body_raw, str) else body_raw
             event_type = body.get('event_type', 'UNKNOWN')
             symbol = body.get('symbol', '')
 
-            logger.info(f"Processing event: {event_type} for {symbol}")
+            logger.info(f"Processing {event_type} for {symbol}")
 
             if event_type == 'STOCK_UPDATE':
                 result = process_stock_update(body)
@@ -90,13 +97,13 @@ def lambda_handler(event, context):
 
         except Exception as e:
             errors += 1
-            logger.error(f"Error processing record: {e}")
+            logger.error(f"Error processing SQS record: {e}", exc_info=True)
 
-    # Calculate execution duration
     duration_ms = int((time.time() - start_time) * 1000)
-
-    # Log execution to CloudWatch
-    log_lambda_execution('stock_processor', processed, errors, duration_ms)
+    logger.info(
+        f"stock_processor done: processed={processed}, errors={errors}, "
+        f"duration={duration_ms}ms"
+    )
 
     return {
         'statusCode': 200,
@@ -109,13 +116,16 @@ def lambda_handler(event, context):
     }
 
 
+# ── Event Processors ───────────────────────────────────────────────────────────
+
 def process_stock_update(event_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Process a stock update event.
-
-    1. Extract stock data from the event
-    2. Run technical analysis using stock_event_engine
-    3. Store analytics results in DynamoDB
+    Full pipeline for a STOCK_UPDATE event:
+      1. Store raw data in DynamoDB
+      2. Fetch price history from DynamoDB for analytics
+      3. Run technical analytics
+      4. Upload analytics report to S3
+      5. Invoke alert_handler Lambda asynchronously
     """
     symbol = event_data.get('symbol', '')
     price = float(event_data.get('price', 0))
@@ -123,80 +133,81 @@ def process_stock_update(event_data: Dict[str, Any]) -> Dict[str, Any]:
     change_pct = float(event_data.get('change_percent', 0))
     timestamp = event_data.get('timestamp', datetime.utcnow().isoformat())
 
-    result = {
-        'symbol': symbol,
-        'status': 'processed',
-        'analytics': {},
-    }
+    result = {'symbol': symbol, 'status': 'processed', 'analytics': {}}
 
-    # Store the raw stock data in DynamoDB
+    # Step 1: Store raw stock data in DynamoDB
     store_stock_data(symbol, price, volume, change_pct, timestamp)
 
-    # Run analytics if stock_event_engine is available
-    if StockAnalyzer:
-        analytics = run_analytics(symbol, price)
+    # Step 2: Fetch historical prices for analytics
+    prices = fetch_historical_prices(symbol)
+    if not prices:
+        prices = [price]
+
+    # Step 3: Run analytics
+    analytics = {}
+    if StockAnalyzer and len(prices) >= 2:
+        analytics = run_analytics(symbol, prices)
         result['analytics'] = analytics
 
-        # Store analytics results
+        # Store analytics results in DynamoDB
         store_analytics(symbol, analytics)
 
-    logger.info(f"Stock update processed: {symbol} @ ${price:.2f}")
+    # Step 4: Upload analytics report to S3
+    if analytics:
+        upload_analytics_to_s3(symbol, analytics)
+
+    # Step 5: Invoke alert_handler Lambda (fire-and-forget)
+    invoke_alert_handler(symbol, price, volume, change_pct)
+
+    logger.info(f"Stock update pipeline complete: {symbol} @ ${price:.2f}")
     return result
 
 
 def process_analytics_request(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Process an analytics request event."""
+    """Process an ANALYTICS_REQUEST event."""
     symbol = event_data.get('symbol', '')
     analysis_type = event_data.get('analysis_type', 'FULL')
 
-    result = {
-        'symbol': symbol,
-        'analysis_type': analysis_type,
-        'status': 'completed',
-    }
+    result = {'symbol': symbol, 'analysis_type': analysis_type, 'status': 'completed'}
 
-    # Fetch historical data from DynamoDB for analysis
-    historical = fetch_historical_prices(symbol)
-
-    if historical and StockAnalyzer:
-        analytics = run_full_analysis(symbol, historical)
+    prices = fetch_historical_prices(symbol)
+    if prices and StockAnalyzer:
+        analytics = run_full_analysis(symbol, prices)
         result['analytics'] = analytics
         store_analytics(symbol, analytics)
+        if analytics:
+            upload_analytics_to_s3(symbol, analytics)
 
     return result
 
 
-def run_analytics(symbol: str, current_price: float) -> Dict[str, Any]:
-    """Run quick analytics on current price data."""
+# ── Analytics ──────────────────────────────────────────────────────────────────
+
+def run_analytics(symbol: str, prices: list) -> Dict[str, Any]:
+    """Run technical analytics on the price history."""
     result = {}
-
     try:
-        # Create a simple price array for demonstration
-        # In production, you'd fetch historical prices from DynamoDB
-        prices = fetch_historical_prices(symbol)
-        if not prices:
-            prices = [current_price]
+        analyzer = StockAnalyzer(prices, symbol)
+        result['summary'] = analyzer.summary()
 
-        if len(prices) >= 2:
-            analyzer = StockAnalyzer(prices, symbol)
-            result['summary'] = analyzer.summary()
+        if len(prices) >= 14:
+            rsi = analyzer.rsi()
+            result['rsi'] = round(float(rsi[-1]), 4)
 
-            if len(prices) >= 14:
-                rsi = analyzer.rsi()
-                result['rsi'] = round(float(rsi[-1]), 4)
-
-            if len(prices) >= 20:
-                sma = analyzer.moving_average(20)
-                result['sma_20'] = round(float(sma[-1]), 4)
-
-                upper, middle, lower = analyzer.bollinger_bands()
-                result['bollinger'] = {
-                    'upper': round(float(upper[-1]), 4),
-                    'middle': round(float(middle[-1]), 4),
-                    'lower': round(float(lower[-1]), 4),
-                }
+        if len(prices) >= 20:
+            sma = analyzer.moving_average(20)
+            result['sma_20'] = round(float(sma[-1]), 4)
+            upper, middle, lower = analyzer.bollinger_bands()
+            result['bollinger'] = {
+                'upper': round(float(upper[-1]), 4),
+                'middle': round(float(middle[-1]), 4),
+                'lower': round(float(lower[-1]), 4),
+            }
 
     except (InsufficientDataError, StockDataError) as e:
+        result['error'] = str(e)
+    except Exception as e:
+        logger.error(f"Analytics error for {symbol}: {e}")
         result['error'] = str(e)
 
     return result
@@ -205,33 +216,30 @@ def run_analytics(symbol: str, current_price: float) -> Dict[str, Any]:
 def run_full_analysis(symbol: str, prices: list) -> Dict[str, Any]:
     """Run comprehensive analysis using stock_event_engine."""
     result = {}
-
     try:
         analyzer = StockAnalyzer(prices, symbol)
         detector = SignalDetector(prices, symbol)
-
         result['summary'] = analyzer.summary()
         result['signals'] = detector.generate_signals()
-
         if len(prices) >= 20:
             result['sma_20'] = round(float(analyzer.moving_average(20)[-1]), 4)
         if len(prices) >= 50:
             result['sma_50'] = round(float(analyzer.moving_average(50)[-1]), 4)
         if len(prices) >= 2:
             result['volatility'] = round(analyzer.volatility(), 4)
-
-    except (InsufficientDataError, StockDataError) as e:
+    except Exception as e:
+        logger.error(f"Full analysis error for {symbol}: {e}")
         result['error'] = str(e)
-
     return result
 
 
+# ── DynamoDB ───────────────────────────────────────────────────────────────────
+
 def store_stock_data(symbol: str, price: float, volume: int,
                      change_pct: float, timestamp: str):
-    """Store stock data in DynamoDB."""
+    """Store raw stock data in the stock_data DynamoDB table."""
     try:
-        table_name = os.getenv('DYNAMODB_STOCKS_TABLE', 'stock_data')
-        table = dynamodb.Table(table_name)
+        table = dynamodb.Table(os.getenv('DYNAMODB_STOCKS_TABLE', 'stock_data'))
         table.put_item(Item={
             'symbol': symbol,
             'timestamp': timestamp,
@@ -239,56 +247,93 @@ def store_stock_data(symbol: str, price: float, volume: int,
             'volume': volume,
             'change_percent': Decimal(str(change_pct)),
         })
+        logger.info(f"DynamoDB: stored stock data for {symbol}")
     except ClientError as e:
-        logger.error(f"Error storing stock data: {e}")
+        logger.error(f"DynamoDB store_stock_data error: {e}")
 
 
 def store_analytics(symbol: str, analytics: Dict):
-    """Store analytics results in DynamoDB."""
+    """Store analytics results in the analytics_results DynamoDB table."""
     try:
-        table_name = os.getenv('DYNAMODB_ANALYTICS_TABLE', 'analytics_results')
-        table = dynamodb.Table(table_name)
+        table = dynamodb.Table(os.getenv('DYNAMODB_ANALYTICS_TABLE', 'analytics_results'))
         item = {
             'symbol': symbol,
             'analysis_type': 'LAMBDA_ANALYTICS',
             'result_data': json.loads(json.dumps(analytics, default=str)),
             'computed_at': datetime.utcnow().isoformat(),
         }
+        # Convert floats to Decimal for DynamoDB
         sanitized = json.loads(json.dumps(item), parse_float=Decimal)
         table.put_item(Item=sanitized)
+        logger.info(f"DynamoDB: stored analytics for {symbol}")
     except ClientError as e:
-        logger.error(f"Error storing analytics: {e}")
+        logger.error(f"DynamoDB store_analytics error: {e}")
 
 
 def fetch_historical_prices(symbol: str, limit: int = 100) -> list:
-    """Fetch historical prices from DynamoDB."""
+    """Fetch historical price list for a symbol from DynamoDB."""
     try:
-        table_name = os.getenv('DYNAMODB_STOCKS_TABLE', 'stock_data')
-        table = dynamodb.Table(table_name)
+        table = dynamodb.Table(os.getenv('DYNAMODB_STOCKS_TABLE', 'stock_data'))
         response = table.query(
             KeyConditionExpression=boto3.dynamodb.conditions.Key('symbol').eq(symbol),
             ScanIndexForward=True,
             Limit=limit,
         )
-        items = response.get('Items', [])
-        return [float(item['price']) for item in items if 'price' in item]
+        return [float(item['price']) for item in response.get('Items', []) if 'price' in item]
     except ClientError as e:
-        logger.error(f"Error fetching historical prices: {e}")
+        logger.error(f"DynamoDB fetch_historical_prices error: {e}")
         return []
 
 
-def log_lambda_execution(function_name: str, processed: int,
-                         errors: int, duration_ms: int):
-    """Log Lambda execution metrics to CloudWatch."""
-    try:
-        log_group = os.getenv('CLOUDWATCH_LOG_GROUP', 'stock-platform-logs')
-        log_stream = 'lambda-executions'
+# ── S3 ─────────────────────────────────────────────────────────────────────────
 
-        message = (
-            f"[LAMBDA] Function: {function_name} | "
-            f"Processed: {processed} | Errors: {errors} | "
-            f"Duration: {duration_ms}ms"
+def upload_analytics_to_s3(symbol: str, analytics: Dict):
+    """
+    Upload the analytics report as a JSON file to S3.
+    Key: analytics/{symbol}/{timestamp}.json
+    """
+    bucket = os.getenv('S3_BUCKET_NAME', 'stock-platform-reports-2024')
+    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    key = f"analytics/{symbol}/{timestamp}.json"
+
+    try:
+        report = {
+            'symbol': symbol,
+            'computed_at': datetime.utcnow().isoformat(),
+            'source': 'lambda:stock_processor',
+            'analytics': analytics,
+        }
+        s3_client.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=json.dumps(report, indent=2, default=str),
+            ContentType='application/json',
         )
-        logger.info(message)
-    except Exception as e:
-        logger.error(f"Error logging execution: {e}")
+        logger.info(f"S3: uploaded analytics report → s3://{bucket}/{key}")
+    except ClientError as e:
+        logger.error(f"S3 upload error for {symbol}: {e}")
+
+
+# ── Lambda Chaining ────────────────────────────────────────────────────────────
+
+def invoke_alert_handler(symbol: str, price: float, volume: int, change_pct: float):
+    """
+    Asynchronously invoke alert_handler Lambda to evaluate active alerts.
+    This chains the two Lambda functions without going through SQS again.
+    """
+    function_name = os.getenv('LAMBDA_ALERT_HANDLER', 'alert_handler')
+    payload = {
+        'symbol': symbol,
+        'price': price,
+        'volume': volume,
+        'change_percent': change_pct,
+    }
+    try:
+        lambda_client.invoke(
+            FunctionName=function_name,
+            InvocationType='Event',  # async, fire-and-forget
+            Payload=json.dumps(payload).encode('utf-8'),
+        )
+        logger.info(f"Lambda chain: invoked alert_handler for {symbol}")
+    except ClientError as e:
+        logger.error(f"Error chaining alert_handler: {e}")

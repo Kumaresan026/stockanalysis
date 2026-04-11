@@ -36,6 +36,7 @@ from stocks.services.sns_service import SNSService
 from stocks.services.cloudwatch_service import CloudWatchService
 from stocks.events.producer import StockEventProducer
 from stocks.analytics.indicators import StockIndicatorService
+from stocks.services.lambda_service import LambdaService
 
 logger = logging.getLogger('stocks')
 
@@ -48,6 +49,7 @@ sns_service = SNSService()
 cloudwatch_service = CloudWatchService()
 event_producer = StockEventProducer()
 indicator_service = StockIndicatorService()
+lambda_service = LambdaService()
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -126,8 +128,9 @@ def stock_detail(request, symbol):
         change_percent=stock_data.get('change_percent', 0),
     )
 
-    # Step 3: Send event to SQS
-    event_producer.send_stock_update(
+    # Step 3: Invoke stock_processor Lambda directly (also pushed to SQS for async)
+    # Lambda handles: DynamoDB update, analytics, S3 upload, and alert evaluation via SNS
+    lambda_service.invoke_stock_processor(
         symbol=symbol,
         price=stock_data.get('price', 0),
         volume=stock_data.get('volume', 0),
@@ -330,13 +333,13 @@ def create_alert(request):
                 threshold=float(threshold),
             )
 
-            # Send event to SQS
-            event_producer.send_alert_created(
-                alert_id=str(alert.id),
-                user_id=str(request.user.id),
+            # Invoke alert_handler Lambda directly for immediate evaluation
+            # Lambda will: read DynamoDB alert rules, check conditions, publish SNS notification
+            lambda_service.invoke_alert_handler(
                 symbol=symbol,
-                condition=condition,
-                threshold=float(threshold),
+                price=float(stock_data.get('price', 0)),
+                volume=int(stock_data.get('volume', 0)),
+                change_percent=float(stock_data.get('change_percent', 0)),
             )
 
             # Log to CloudWatch

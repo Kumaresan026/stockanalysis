@@ -16,16 +16,18 @@ from stocks.services.s3_service import S3Service
 from stocks.services.sqs_service import SQSService
 from stocks.services.sns_service import SNSService
 from stocks.services.cloudwatch_service import CloudWatchService
+from stocks.services.lambda_service import LambdaService
 
 
 class Command(BaseCommand):
-    help = "Initialize all required AWS resources (DynamoDB tables, S3 bucket, SQS queue, SNS topic, CloudWatch log group)."
+    help = "Initialize all required AWS resources (DynamoDB, S3, SQS, SNS, CloudWatch, Lambda)."
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("\n=== Initializing AWS Cloud Resources ===\n"))
+        # Note: step count updated to 6 to include Lambda
 
         # ── 1. DynamoDB ──────────────────────────────────────────────
-        self.stdout.write("  [1/5] DynamoDB — creating tables...")
+        self.stdout.write("  [1/6] DynamoDB — creating tables...")
         try:
             db = DynamoDBService()
             if db.available:
@@ -37,7 +39,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"        ✗ DynamoDB error: {e}"))
 
         # ── 2. S3 ────────────────────────────────────────────────────
-        self.stdout.write("  [2/5] S3 — creating bucket...")
+        self.stdout.write("  [2/6] S3 — creating bucket...")
         try:
             s3 = S3Service()
             if s3.available:
@@ -49,7 +51,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"        ✗ S3 error: {e}"))
 
         # ── 3. SQS ───────────────────────────────────────────────────
-        self.stdout.write("  [3/5] SQS — creating queue...")
+        self.stdout.write("  [3/6] SQS — creating queue...")
         try:
             sqs = SQSService()
             if sqs.available:
@@ -61,7 +63,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"        ✗ SQS error: {e}"))
 
         # ── 4. SNS ───────────────────────────────────────────────────
-        self.stdout.write("  [4/5] SNS — creating topic...")
+        self.stdout.write("  [4/6] SNS — creating topic...")
         try:
             sns = SNSService()
             if sns.available:
@@ -73,7 +75,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"        ✗ SNS error: {e}"))
 
         # ── 5. CloudWatch ────────────────────────────────────────────
-        self.stdout.write("  [5/5] CloudWatch — creating log group...")
+        self.stdout.write("  [5/6] CloudWatch — creating log group...")
         try:
             cw = CloudWatchService()
             if cw.available:
@@ -83,5 +85,39 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING("        ⚠ CloudWatch unavailable — credentials missing."))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"        ✗ CloudWatch error: {e}"))
+
+        # ── 6. Lambda ────────────────────────────────────────────────
+        self.stdout.write("  [6/6] Lambda — deploying functions and SQS trigger...")
+        try:
+            lsvc = LambdaService()
+            if lsvc.available:
+                import os
+                # Deploy stock_processor
+                arn1 = lsvc.deploy_function(
+                    'stock_processor',
+                    'stock_processor.lambda_handler',
+                    'Processes SQS stock events, runs analytics, stores to DynamoDB/S3',
+                )
+                if arn1:
+                    lsvc.wait_for_active('stock_processor')
+                    self.stdout.write(self.style.SUCCESS("        ✓ stock_processor Lambda deployed."))
+                # Deploy alert_handler
+                arn2 = lsvc.deploy_function(
+                    'alert_handler',
+                    'alert_handler.lambda_handler',
+                    'Evaluates alert rules and sends SNS notifications',
+                )
+                if arn2:
+                    lsvc.wait_for_active('alert_handler')
+                    self.stdout.write(self.style.SUCCESS("        ✓ alert_handler Lambda deployed."))
+                # Create SQS trigger
+                queue_name = os.getenv('SQS_QUEUE_NAME', 'stock-events-queue')
+                ok = lsvc.create_sqs_trigger('stock_processor', queue_name)
+                if ok:
+                    self.stdout.write(self.style.SUCCESS("        ✓ SQS → Lambda trigger configured."))
+            else:
+                self.stdout.write(self.style.WARNING("        ⚠ Lambda unavailable — credentials missing."))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"        ✗ Lambda error: {e}"))
 
         self.stdout.write(self.style.MIGRATE_HEADING("\n=== AWS Resource Initialization Complete ===\n"))
