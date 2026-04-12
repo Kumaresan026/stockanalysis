@@ -288,10 +288,53 @@ def remove_from_watchlist(request, symbol):
 
 @login_required
 def alerts_view(request):
-    """Display user's alerts."""
-    alerts = Alert.objects.filter(user=request.user).select_related('stock')
+    """
+    Display user's alerts.
+    Primary source: DynamoDB (persists across EB deployments).
+    Fallback: SQLite (local dev or if DynamoDB unavailable).
+    """
+    user_id = str(request.user.id)
+
+    # Try DynamoDB first (survives deployments)
+    dynamo_alerts = []
+    if dynamodb_service.available:
+        try:
+            table_name = __import__('os').getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
+            all_items = dynamodb_service.scan_table(table_name, limit=200)
+            dynamo_alerts = [
+                item for item in all_items
+                if str(item.get('user_id', '')) == user_id
+                and item.get('status', 'active') == 'active'
+            ]
+        except Exception as e:
+            logger.warning(f"Could not fetch alerts from DynamoDB: {e}")
+
+    # Also get SQLite alerts for display
+    sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
+
+    # If DynamoDB has alerts but SQLite is empty, re-sync SQLite from DynamoDB
+    if dynamo_alerts and not sqlite_alerts:
+        for item in dynamo_alerts:
+            try:
+                stock_obj, _ = Stock.objects.get_or_create(
+                    symbol=item.get('symbol', ''),
+                    defaults={'name': item.get('symbol', ''), 'current_price': 0},
+                )
+                Alert.objects.get_or_create(
+                    user=request.user,
+                    stock=stock_obj,
+                    condition=item.get('condition', ''),
+                    threshold=item.get('threshold', 0),
+                    defaults={'status': item.get('status', 'active')},
+                )
+            except Exception as e:
+                logger.warning(f"Could not re-sync alert from DynamoDB: {e}")
+        sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
+
     context = {
-        'alerts': alerts,
+        'alerts': sqlite_alerts,
+        'dynamo_alerts': dynamo_alerts,
+        'aws_connected': dynamodb_service.available,
     }
     return render(request, 'stocks/alerts.html', context)
 
