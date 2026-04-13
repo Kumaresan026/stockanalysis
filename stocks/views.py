@@ -445,6 +445,54 @@ def create_alert(request):
                 change_percent=float(stock_data.get('change_percent', 0)),
             )
 
+            # ── Send alert creation confirmation email ────────────────
+            # Re-subscribe on every alert creation to ensure the email
+            # is always subscribed even if the initial subscribe failed.
+            current_price = float(stock_data.get('price', 0))
+            user_email    = request.user.email
+
+            if user_email and sns_service.available:
+                # Ensure the user is subscribed
+                sns_service.subscribe(user_email)
+
+                # Human-readable condition explanation
+                condition_map = {
+                    'PRICE_ABOVE':  f'rises ABOVE ${float(threshold):.2f}',
+                    'PRICE_BELOW':  f'falls BELOW ${float(threshold):.2f}',
+                    'VOLUME_ABOVE': f'volume exceeds {int(threshold):,}',
+                    'CHANGE_ABOVE': f'gains more than {float(threshold):.2f}%',
+                    'CHANGE_BELOW': f'drops more than {abs(float(threshold)):.2f}%',
+                }
+                condition_text = condition_map.get(condition, f'{condition} {threshold}')
+
+                confirmation_subject = f"Alert Set: {symbol} {condition.replace('_', ' ').title()} ${float(threshold):.2f}"
+                confirmation_message = (
+                    f"Hi {request.user.username},\n\n"
+                    f"Your stock alert has been set successfully!\n"
+                    f"{'=' * 50}\n\n"
+                    f"  Stock     : {symbol} ({stock_data.get('name', symbol)})\n"
+                    f"  Condition : {condition.replace('_', ' ')}\n"
+                    f"  Threshold : ${float(threshold):.2f}\n"
+                    f"  Current   : ${current_price:.2f}\n\n"
+                    f"  You will receive an email when {symbol} {condition_text}.\n\n"
+                    f"{'=' * 50}\n"
+                    f"Manage your alerts: https://{request.get_host()}/alerts/\n\n"
+                    f"— Cloud Stock Market Analysis Platform\n"
+                    f"  Powered by AWS SNS"
+                )
+
+                ok = sns_service.publish(
+                    subject=confirmation_subject,
+                    message=confirmation_message,
+                )
+                if ok:
+                    logger.info(f"Alert confirmation email sent to {user_email} for {symbol} {condition}")
+                else:
+                    logger.warning(f"Alert confirmation email FAILED for {user_email}. "
+                                   "Check: SNS topic exists, email subscription confirmed.")
+            elif not user_email:
+                logger.warning(f"User {request.user.username} has no email — cannot send alert confirmation.")
+
             # Log to CloudWatch
             cloudwatch_service.log_system_event(
                 'ALERT_CREATED',
@@ -452,7 +500,7 @@ def create_alert(request):
                 f"dynamo={'ok' if dynamo_ok else 'FAILED'}"
             )
 
-            messages.success(request, f'Alert created for {symbol}.')
+            messages.success(request, f'Alert created for {symbol}. Check your email for confirmation!')
             return redirect('alerts')
     else:
         form = AlertForm()

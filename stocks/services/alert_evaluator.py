@@ -209,28 +209,53 @@ def _mark_triggered_sqlite(alert_id: str, user_id: str,
 
 def _send_sns_notification(sns_service, symbol: str, condition: str,
                            threshold: float, current_price: float, user_id: str):
-    """Send an email notification via SNS."""
+    """Send a triggered alert email notification via SNS."""
     if not sns_service or not sns_service.available:
         logger.warning(f"[AlertEval] SNS unavailable — notification not sent for {symbol}")
         return
 
-    subject = f"Stock Alert Triggered: {symbol} {condition} ${threshold:.2f}"
+    # Human-readable what happened
+    condition_descriptions = {
+        'PRICE_ABOVE':  f"rose ABOVE your target of ${threshold:.2f}",
+        'PRICE_BELOW':  f"fell BELOW your target of ${threshold:.2f}",
+        'VOLUME_ABOVE': f"volume exceeded your target of {int(threshold):,}",
+        'CHANGE_ABOVE': f"gained more than {threshold:.2f}% today",
+        'CHANGE_BELOW': f"dropped more than {abs(threshold):.2f}% today",
+    }
+    what_happened = condition_descriptions.get(
+        condition,
+        f"{condition} threshold of {threshold} was met"
+    )
+
+    # Direction indicator
+    direction = "📈" if 'ABOVE' in condition else "📉"
+
+    subject = f"{direction} Alert Triggered: {symbol} {condition.replace('_', ' ').title()}"
+
     message = (
-        f"Stock Alert Triggered\n"
-        f"{'=' * 45}\n\n"
-        f"Symbol    : {symbol}\n"
-        f"Condition : {condition}\n"
-        f"Threshold : ${threshold:.2f}\n"
-        f"Price Now : ${current_price:.2f}\n"
-        f"Time (UTC): {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        f"Log in to your dashboard to manage this alert:\n"
-        f"  https://<your-eb-url>/alerts/\n\n"
-        f"— Cloud Stock Market Analysis Platform"
+        f"🔔 Stock Alert Triggered!\n"
+        f"{'=' * 50}\n\n"
+        f"  Stock     : {symbol}\n"
+        f"  Event     : {symbol} has {what_happened}\n"
+        f"  Price Now : ${current_price:.2f}\n"
+        f"  Threshold : ${threshold:.2f}\n"
+        f"  Time (UTC): {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        f"{'=' * 50}\n"
+        f"This alert has been marked as triggered and will not fire again.\n"
+        f"To set a new alert or manage existing ones, log in to your dashboard.\n\n"
+        f"— Cloud Stock Market Analysis Platform\n"
+        f"  Powered by AWS SNS & DynamoDB"
     )
 
     ok = sns_service.publish(subject=subject, message=message)
     if ok:
-        logger.info(f"[AlertEval] SNS email sent for {symbol} {condition}")
+        logger.info(f"[AlertEval] ✅ Triggered alert email sent: {symbol} {condition} @ ${current_price:.2f}")
     else:
-        logger.error(f"[AlertEval] SNS email FAILED for {symbol} {condition} — "
-                     f"check SNS topic exists and email subscription is confirmed")
+        logger.error(
+            f"[AlertEval] ❌ Triggered alert email FAILED for {symbol} {condition}.\n"
+            f"  Possible causes:\n"
+            f"  1. AWS_SESSION_TOKEN expired → refresh in EB Console\n"
+            f"  2. SNS topic does not exist → run: python manage.py init_aws_resources\n"
+            f"  3. No confirmed email subscriptions → check inbox for AWS confirmation email\n"
+            f"  4. Run: python manage.py test_alert --symbol {symbol} --email your@email.com"
+        )
