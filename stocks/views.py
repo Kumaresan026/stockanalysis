@@ -147,8 +147,8 @@ def stock_detail(request, symbol):
         change_percent=stock_data.get('change_percent', 0),
     )
 
-    # Step 3: Evaluate alerts directly (in-process, no Lambda dependency)
-    # This fires every time any user views this stock's detail page.
+    # Step 3: Evaluate alerts directly (in-process, real-time, no Lambda dependency).
+    # This guarantees alerts fire even if Lambda is not deployed.
     evaluate_and_notify(
         symbol=symbol,
         price=stock_data.get('price', 0),
@@ -158,19 +158,29 @@ def stock_detail(request, symbol):
         sns_service=sns_service,
     )
 
-    # Step 4: Also invoke Lambda asynchronously (if deployed) for analytics pipeline
-    # This is fire-and-forget — failure here does NOT affect alert evaluation above
-    lambda_service.invoke_stock_processor(
+    # Step 4: Send STOCK_UPDATE to SQS to trigger Lambda pipeline.
+    # Flow: SQS message -> Lambda event source mapping -> stock_processor Lambda
+    #   -> DynamoDB (analytics) -> S3 (report) -> alert_handler Lambda -> SNS email
+    # This is fire-and-forget and does NOT block the web response.
+    sqs_sent = event_producer.send_stock_update(
         symbol=symbol,
         price=stock_data.get('price', 0),
         volume=stock_data.get('volume', 0),
         change_percent=stock_data.get('change_percent', 0),
     )
-
+    if sqs_sent:
+        logger.info(f"[SQS] STOCK_UPDATE sent for {symbol} -> Lambda pipeline triggered")
+    else:
+        # SQS unavailable (e.g. expired credentials): fall back to direct Lambda invoke
+        logger.warning(f"[SQS] STOCK_UPDATE failed for {symbol} - falling back to direct Lambda invoke")
+        lambda_service.invoke_stock_processor(
+            symbol=symbol,
+            price=stock_data.get('price', 0),
+            volume=stock_data.get('volume', 0),
+            change_percent=stock_data.get('change_percent', 0),
+        )
     # Log stock fetch to CloudWatch
-    cloudwatch_service.log_stock_fetch(
-        symbol, stock_data.get('source', 'unknown'), True
-    )
+    cloudwatch_service.log_stock_fetch(symbol, stock_data.get('source', 'unknown'), True)
 
     # Step 5: Compute analytics
     prices = [d['close'] for d in history] if history else []
@@ -437,12 +447,25 @@ def create_alert(request):
                     "Only SQLite copy exists — it will be lost on next EB deploy."
                 )
 
-            # Invoke alert_handler Lambda directly for immediate evaluation
-            lambda_service.invoke_alert_handler(
+            # Send ALERT_CREATED event to SQS (triggers Lambda pipeline)
+            # This completes the event-driven flow: Alert.create -> SQS -> Lambda -> DynamoDB/SNS
+            alert_sqs_sent = event_producer.send_alert_created(
+                alert_id=stable_alert_id,
+                user_id=str(request.user.id),
                 symbol=symbol,
-                price=float(stock_data.get('price', 0)),
-                volume=int(stock_data.get('volume', 0)),
-                change_percent=float(stock_data.get('change_percent', 0)),
+                condition=condition,
+                threshold=float(threshold),
+            )
+            if alert_sqs_sent:
+                logger.info(f"[SQS] ALERT_CREATED sent for {symbol} {condition}")
+            else:
+                # Fallback: direct Lambda invoke if SQS is unavailable
+                logger.warning(f"[SQS] ALERT_CREATED failed for {symbol} - falling back to direct Lambda invoke")
+                lambda_service.invoke_alert_handler(
+                    symbol=symbol,
+                    price=float(stock_data.get('price', 0)),
+                    volume=int(stock_data.get('volume', 0)),
+                    change_percent=float(stock_data.get('change_percent', 0)),
             )
 
             # ── Send alert creation confirmation email ────────────────

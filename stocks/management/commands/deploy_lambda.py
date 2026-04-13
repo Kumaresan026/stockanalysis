@@ -23,13 +23,13 @@ class Command(BaseCommand):
         svc = LambdaService()
         if not svc.available:
             self.stdout.write(self.style.WARNING(
-                "  ⚠ AWS credentials not configured — skipping Lambda deployment."
+                "  [!] AWS credentials not configured - skipping Lambda deployment."
             ))
             return
 
         queue_name = os.getenv('SQS_QUEUE_NAME', 'stock-events-queue')
 
-        # ── 1. Deploy stock_processor ──────────────────────────────────
+        # -- 1. Deploy stock_processor ------------------------------------
         self.stdout.write("  [1/3] Deploying stock_processor Lambda...")
         arn = svc.deploy_function(
             'stock_processor',
@@ -37,18 +37,23 @@ class Command(BaseCommand):
             'Processes SQS stock updates: runs analytics, stores to DynamoDB/S3, chains alert_handler',
         )
         if arn:
-            self.stdout.write(self.style.SUCCESS(f"        ✓ stock_processor deployed."))
-            self.stdout.write("              Waiting for function to become Active...")
+            self.stdout.write(self.style.SUCCESS("  [OK] stock_processor deployed."))
+            self.stdout.write("       Waiting for function to become Active...")
             active = svc.wait_for_active('stock_processor')
             if active:
-                self.stdout.write(self.style.SUCCESS("        ✓ stock_processor is Active."))
+                self.stdout.write(self.style.SUCCESS("  [OK] stock_processor is Active."))
             else:
-                self.stdout.write(self.style.WARNING("        ⚠ stock_processor may still be pending."))
+                self.stdout.write(self.style.WARNING("  [!]  stock_processor may still be pending."))
         else:
-            self.stdout.write(self.style.ERROR("        ✗ stock_processor deployment failed."))
+            self.stdout.write(self.style.ERROR("  [X]  stock_processor deployment FAILED."))
+            self.stdout.write(self.style.ERROR(
+                "       Check: LabRole IAM permissions for lambda:CreateFunction\n"
+                "       and that the Lambda function code file exists at:\n"
+                "       stocks/lambda_functions/stock_processor.py"
+            ))
             return
 
-        # ── 2. Deploy alert_handler ────────────────────────────────────
+        # -- 2. Deploy alert_handler --------------------------------------
         self.stdout.write("  [2/3] Deploying alert_handler Lambda...")
         arn = svc.deploy_function(
             'alert_handler',
@@ -56,35 +61,43 @@ class Command(BaseCommand):
             'Evaluates alert rules from DynamoDB and sends SNS notifications',
         )
         if arn:
-            self.stdout.write(self.style.SUCCESS(f"        ✓ alert_handler deployed."))
-            self.stdout.write("              Waiting for function to become Active...")
+            self.stdout.write(self.style.SUCCESS("  [OK] alert_handler deployed."))
+            self.stdout.write("       Waiting for function to become Active...")
             active = svc.wait_for_active('alert_handler')
             if active:
-                self.stdout.write(self.style.SUCCESS("        ✓ alert_handler is Active."))
+                self.stdout.write(self.style.SUCCESS("  [OK] alert_handler is Active."))
             else:
-                self.stdout.write(self.style.WARNING("        ⚠ alert_handler may still be pending."))
+                self.stdout.write(self.style.WARNING("  [!]  alert_handler may still be pending."))
         else:
-            self.stdout.write(self.style.ERROR("        ✗ alert_handler deployment failed."))
+            self.stdout.write(self.style.ERROR("  [X]  alert_handler deployment FAILED."))
             return
 
-        # ── 3. Create SQS → stock_processor trigger ────────────────────
-        self.stdout.write(f"  [3/3] Creating SQS trigger: {queue_name} → stock_processor...")
+        # -- 3. Create SQS -> stock_processor trigger ---------------------
+        self.stdout.write(f"  [3/3] Creating SQS trigger: {queue_name} -> stock_processor...")
         ok = svc.create_sqs_trigger('stock_processor', queue_name)
         if ok:
             self.stdout.write(self.style.SUCCESS(
-                f"        ✓ SQS trigger active: any message on '{queue_name}' "
-                f"will automatically invoke stock_processor."
+                f"  [OK] SQS trigger active: {queue_name} -> stock_processor\n"
+                f"       Any SQS message now automatically invokes stock_processor Lambda.\n"
+                f"\n"
+                f"       Full event-driven flow:\n"
+                f"       Django -> SQS -> Lambda(stock_processor) -> DynamoDB + S3\n"
+                f"                     -> Lambda(alert_handler) -> SNS -> Email"
             ))
         else:
             self.stdout.write(self.style.ERROR(
-                "        ✗ SQS trigger creation failed. "
-                "Check that the SQS queue exists and LabRole has the right permissions."
+                "  [X]  SQS trigger creation FAILED.\n"
+                "       Check: LabRole has lambda:CreateEventSourceMapping permission\n"
+                "       and the SQS queue exists (run: python manage.py init_aws_resources)"
             ))
 
         self.stdout.write(self.style.MIGRATE_HEADING(
             "\n=== Lambda Deployment Complete ===\n"
         ))
         self.stdout.write(
-            "  Next: visit any stock page on your site to trigger the pipeline!\n"
-            "  Check: AWS Lambda Console → stock_processor → Monitor → Logs in CloudWatch\n"
+            "  Verify: python manage.py check_aws --verbose\n"
+            "  Test:   python manage.py test_alert --symbol AMZN --price 177\n"
+            "\n"
+            "  To see Lambda logs:\n"
+            "  AWS Console -> Lambda -> stock_processor -> Monitor -> CloudWatch Logs\n"
         )

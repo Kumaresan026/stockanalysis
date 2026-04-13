@@ -121,8 +121,11 @@ class LambdaService:
 
         zip_bytes = self.package_function(function_name)
 
-        # Environment variables for Lambda (do NOT include credentials —
-        # Lambda uses its IAM role automatically)
+        # Environment variables for Lambda.
+        # NOTE: Do NOT include AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID,
+        # AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN -- these are RESERVED keys
+        # that AWS Lambda automatically provides. Trying to set them causes
+        # InvalidParameterValueException on CreateFunction/UpdateFunction.
         env_vars = {
             'DYNAMODB_STOCKS_TABLE':    os.getenv('DYNAMODB_STOCKS_TABLE', 'stock_data'),
             'DYNAMODB_ALERTS_TABLE':    os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules'),
@@ -130,52 +133,82 @@ class LambdaService:
             'S3_BUCKET_NAME':           os.getenv('S3_BUCKET_NAME', 'stock-platform-reports-2024'),
             'SNS_TOPIC_NAME':           os.getenv('SNS_TOPIC_NAME', 'stock-alerts-topic'),
             'CLOUDWATCH_LOG_GROUP':     os.getenv('CLOUDWATCH_LOG_GROUP', 'stock-platform-logs'),
-            'AWS_DEFAULT_REGION':       self.region,
             'LAMBDA_ALERT_HANDLER':     os.getenv('LAMBDA_ALERT_HANDLER', 'alert_handler'),
         }
 
+        # Check if the function already exists
+        function_exists = False
         try:
             self.client.get_function(FunctionName=function_name)
-            # Function exists — update code first, then config
-            logger.info(f"Updating existing Lambda: {function_name}")
-            self.client.update_function_code(
-                FunctionName=function_name,
-                ZipFile=zip_bytes,
-            )
-            # Wait briefly before updating config (AWS requirement)
-            time.sleep(3)
-            self.client.update_function_configuration(
-                FunctionName=function_name,
-                Handler=handler,
-                Environment={'Variables': env_vars},
-                Timeout=60,
-                MemorySize=256,
-            )
-            logger.info(f"Lambda {function_name} updated successfully.")
-
+            function_exists = True
         except ClientError as e:
-            if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                # Create new function
-                logger.info(f"Creating new Lambda: {function_name}")
-                try:
-                    self.client.create_function(
-                        FunctionName=function_name,
-                        Runtime='python3.9',
-                        Role=role_arn,
-                        Handler=handler,
-                        Code={'ZipFile': zip_bytes},
-                        Description=description,
-                        Timeout=60,
-                        MemorySize=256,
-                        Environment={'Variables': env_vars},
-                    )
-                    logger.info(f"Lambda {function_name} created.")
-                except ClientError as ce:
-                    logger.error(f"Error creating {function_name}: {ce}")
-                    return None
-            else:
-                logger.error(f"Error deploying {function_name}: {e}")
+            if e.response['Error']['Code'] != 'ResourceNotFoundException':
+                logger.error(f"Error checking Lambda {function_name}: {e}")
                 return None
+
+        if function_exists:
+            # Update existing function (code first, then config)
+            logger.info(f"Updating existing Lambda: {function_name}")
+            try:
+                self.client.update_function_code(
+                    FunctionName=function_name,
+                    ZipFile=zip_bytes,
+                )
+                # Wait for code update to complete before updating config
+                # (AWS ResoureConflictException if config update starts too soon)
+                time.sleep(5)
+                self.client.update_function_configuration(
+                    FunctionName=function_name,
+                    Handler=handler,
+                    Environment={'Variables': env_vars},
+                    Timeout=60,
+                    MemorySize=256,
+                )
+                logger.info(f"Lambda {function_name} updated successfully.")
+            except ClientError as e:
+                logger.error(f"Error updating Lambda {function_name}: {e}")
+                return None
+        else:
+            # Create new function
+            logger.info(f"Creating new Lambda: {function_name}")
+            try:
+                self.client.create_function(
+                    FunctionName=function_name,
+                    Runtime='python3.9',
+                    Role=role_arn,
+                    Handler=handler,
+                    Code={'ZipFile': zip_bytes},
+                    Description=description,
+                    Timeout=60,
+                    MemorySize=256,
+                    Environment={'Variables': env_vars},
+                )
+                logger.info(f"Lambda {function_name} created successfully.")
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'ResourceConflictException':
+                    # Race condition: function was created between our check and create
+                    # Switch to update path
+                    logger.warning(f"Lambda {function_name} already exists (race condition) - switching to update.")
+                    try:
+                        self.client.update_function_code(
+                            FunctionName=function_name,
+                            ZipFile=zip_bytes,
+                        )
+                        time.sleep(5)
+                        self.client.update_function_configuration(
+                            FunctionName=function_name,
+                            Handler=handler,
+                            Environment={'Variables': env_vars},
+                            Timeout=60,
+                            MemorySize=256,
+                        )
+                        logger.info(f"Lambda {function_name} updated (via conflict recovery).")
+                    except ClientError as ue:
+                        logger.error(f"Error updating {function_name} after conflict: {ue}")
+                        return None
+                else:
+                    logger.error(f"Error creating Lambda {function_name}: {e}")
+                    return None
 
         # Return function ARN
         try:
@@ -254,7 +287,7 @@ class LambdaService:
                 BatchSize=5,
                 FunctionResponseTypes=['ReportBatchItemFailures'],
             )
-            logger.info(f"SQS trigger created: {queue_name} → {function_name}")
+            logger.info(f"SQS trigger created: {queue_name} -> {function_name}")
             return True
         except ClientError as e:
             logger.error(f"Error creating SQS trigger: {e}")
