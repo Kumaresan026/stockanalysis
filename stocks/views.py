@@ -290,29 +290,28 @@ def remove_from_watchlist(request, symbol):
 def alerts_view(request):
     """
     Display user's alerts.
-    Primary source: DynamoDB (persists across EB deployments).
-    Fallback: SQLite (local dev or if DynamoDB unavailable).
+
+    Storage hierarchy:
+    - Primary: DynamoDB (persists across EB deployments, scaling, and restarts)
+    - Fallback: SQLite (local dev or when DynamoDB is unavailable)
+
+    On every load, DynamoDB alerts are re-synced into SQLite so the page
+    renders correctly even when DynamoDB has records the current instance lacks.
     """
     user_id = str(request.user.id)
 
-    # Try DynamoDB first (survives deployments)
+    # Try DynamoDB first — filtered by user_id directly in AWS
     dynamo_alerts = []
     if dynamodb_service.available:
         try:
-            table_name = __import__('os').getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
-            all_items = dynamodb_service.scan_table(table_name, limit=200)
-            dynamo_alerts = [
-                item for item in all_items
-                if str(item.get('user_id', '')) == user_id
-                and item.get('status', 'active') == 'active'
-            ]
+            dynamo_alerts = dynamodb_service.get_user_alerts(user_id, status='active')
         except Exception as e:
             logger.warning(f"Could not fetch alerts from DynamoDB: {e}")
 
     # Also get SQLite alerts for display
     sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
 
-    # If DynamoDB has alerts but SQLite is empty, re-sync SQLite from DynamoDB
+    # Re-sync: if DynamoDB has alerts the local SQLite doesn't know about, recreate them
     if dynamo_alerts and not sqlite_alerts:
         for item in dynamo_alerts:
             try:
@@ -339,9 +338,15 @@ def alerts_view(request):
     return render(request, 'stocks/alerts.html', context)
 
 
+
 @login_required
 def create_alert(request):
-    """Create a new stock alert."""
+    """Create a new stock alert.
+
+    Storage strategy:
+    - Primary: DynamoDB (persists across EB deployments and scaling events)
+    - Fallback: SQLite (used only when DynamoDB is unavailable, i.e. local dev)
+    """
     if request.method == 'POST':
         form = AlertForm(request.POST)
         if form.is_valid():
@@ -359,7 +364,7 @@ def create_alert(request):
                 }
             )
 
-            # Create Django alert
+            # Always create Django model record (needed for page rendering)
             alert = Alert.objects.create(
                 user=request.user,
                 stock=stock_obj,
@@ -367,17 +372,21 @@ def create_alert(request):
                 threshold=threshold,
             )
 
-            # Store in DynamoDB
-            dynamodb_service.store_alert_rule(
+            # Primary persistent store: DynamoDB (survives EB redeployments)
+            dynamo_ok = dynamodb_service.store_alert_rule(
                 alert_id=str(alert.id),
                 user_id=str(request.user.id),
                 symbol=symbol,
                 condition=condition,
                 threshold=float(threshold),
             )
+            if not dynamo_ok:
+                logger.warning(
+                    f"Alert {alert.id} for {symbol} could not be saved to DynamoDB. "
+                    "Only SQLite copy exists — it will be lost on next EB deploy."
+                )
 
             # Invoke alert_handler Lambda directly for immediate evaluation
-            # Lambda will: read DynamoDB alert rules, check conditions, publish SNS notification
             lambda_service.invoke_alert_handler(
                 symbol=symbol,
                 price=float(stock_data.get('price', 0)),
@@ -388,7 +397,8 @@ def create_alert(request):
             # Log to CloudWatch
             cloudwatch_service.log_system_event(
                 'ALERT_CREATED',
-                f"User {request.user.username}: {symbol} {condition} {threshold}"
+                f"User {request.user.username}: {symbol} {condition} {threshold} "
+                f"dynamo={'ok' if dynamo_ok else 'FAILED'}"
             )
 
             messages.success(request, f'Alert created for {symbol}.')
@@ -402,9 +412,20 @@ def create_alert(request):
 
 @login_required
 def delete_alert(request, alert_id):
-    """Delete a stock alert."""
+    """Delete a stock alert from both SQLite and DynamoDB."""
     alert = get_object_or_404(Alert, id=alert_id, user=request.user)
     symbol = alert.stock.symbol
+
+    # Remove from DynamoDB first (primary store)
+    if dynamodb_service.available:
+        table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
+        deleted = dynamodb_service.delete_item(table_name, {'alert_id': str(alert_id)})
+        if deleted:
+            logger.info(f"Alert {alert_id} deleted from DynamoDB.")
+        else:
+            logger.warning(f"Alert {alert_id} could not be deleted from DynamoDB.")
+
+    # Remove from SQLite
     alert.delete()
     messages.success(request, f'Alert for {symbol} deleted.')
     return redirect('alerts')

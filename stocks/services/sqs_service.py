@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 from botocore.exceptions import ClientError, NoCredentialsError
-from stocks.services.aws_session import get_boto3_session, check_aws_available
+from stocks.services.aws_session import get_boto3_session, check_aws_available, log_aws_error
 
 logger = logging.getLogger('stocks')
 
@@ -133,7 +133,7 @@ class SQSService:
             )
             return True
         except ClientError as e:
-            logger.error(f"Error sending SQS message: {e}")
+            log_aws_error(e, f"send_message queue={self.queue_name}")
             return False
 
     def receive_message(self, max_messages: int = 1,
@@ -173,7 +173,7 @@ class SQSService:
             logger.info(f"Received {len(messages)} SQS message(s).")
             return messages
         except ClientError as e:
-            logger.error(f"Error receiving SQS messages: {e}")
+            log_aws_error(e, f"receive_message queue={self.queue_name}")
             return []
 
     def delete_message(self, receipt_handle: str) -> bool:

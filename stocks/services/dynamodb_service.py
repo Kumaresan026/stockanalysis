@@ -16,7 +16,7 @@ from decimal import Decimal
 from typing import Dict, Any, List, Optional
 
 from botocore.exceptions import ClientError, NoCredentialsError
-from stocks.services.aws_session import get_boto3_session, check_aws_available
+from stocks.services.aws_session import get_boto3_session, check_aws_available, log_aws_error
 
 logger = logging.getLogger('stocks')
 
@@ -152,7 +152,7 @@ class DynamoDBService:
             logger.info(f"Item stored in '{table_name}': {list(item.keys())}")
             return True
         except ClientError as e:
-            logger.error(f"Error putting item into '{table_name}': {e}")
+            log_aws_error(e, f"put_item '{table_name}'")
             return False
 
     def get_item(self, table_name: str, key: Dict[str, Any]) -> Optional[Dict]:
@@ -174,7 +174,7 @@ class DynamoDBService:
             response = table.get_item(Key=key)
             return response.get('Item')
         except ClientError as e:
-            logger.error(f"Error getting item from '{table_name}': {e}")
+            log_aws_error(e, f"get_item '{table_name}'")
             return None
 
     def query_items(self, table_name: str, key_condition_expression,
@@ -249,7 +249,7 @@ class DynamoDBService:
             logger.info(f"Item deleted from '{table_name}'.")
             return True
         except ClientError as e:
-            logger.error(f"Error deleting item from '{table_name}': {e}")
+            log_aws_error(e, f"delete_item '{table_name}'")
             return False
 
     def scan_table(self, table_name: str, limit: int = 100) -> List[Dict]:
@@ -262,7 +262,7 @@ class DynamoDBService:
             response = table.scan(Limit=limit)
             return response.get('Items', [])
         except ClientError as e:
-            logger.error(f"Error scanning '{table_name}': {e}")
+            log_aws_error(e, f"scan_table '{table_name}'")
             return []
 
     # ── Convenience Methods ───────────────────────────────────────────
@@ -306,3 +306,39 @@ class DynamoDBService:
             'computed_at': datetime.utcnow().isoformat(),
         }
         return self.put_item(table_name, item)
+
+    def get_user_alerts(self, user_id: str, status: str = 'active') -> List[Dict]:
+        """
+        Fetch alert rules for a specific user from DynamoDB.
+
+        Uses a FilterExpression to query by user_id and status directly in AWS,
+        rather than scanning the full table and filtering in Python.
+
+        Args:
+            user_id: String representation of the user's primary key.
+            status: Alert status to filter by ('active', 'triggered', 'disabled').
+
+        Returns:
+            List of alert item dicts, or empty list on failure.
+        """
+        if not self.available:
+            return []
+
+        table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
+        try:
+            table = self.dynamodb.Table(table_name)
+            response = table.scan(
+                FilterExpression='user_id = :uid AND #st = :status',
+                ExpressionAttributeNames={'#st': 'status'},
+                ExpressionAttributeValues={
+                    ':uid': str(user_id),
+                    ':status': status,
+                },
+            )
+            items = response.get('Items', [])
+            logger.info(f"Fetched {len(items)} {status} alerts for user {user_id} from DynamoDB.")
+            return items
+        except ClientError as e:
+            logger.error(f"Error fetching user alerts from DynamoDB: {e}")
+            return []
+

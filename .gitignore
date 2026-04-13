@@ -1,2 +1,40 @@
-
+# Environment — never commit real credentials
 .env
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Django
+*.log
+stock_platform.log
+db.sqlite3
+staticfiles/
+media/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AWS EB (auto-generated)
+.elasticbeanstalk/

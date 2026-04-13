@@ -1,9 +1,16 @@
 """
 Django management command: poll_sqs
 
-Run an infinite loop that polls SQS for messages and passes them
-to the local lambda functions (stock_processor, alert_handler),
-simulating an event-driven architecture on Elastic Beanstalk.
+Runs as the 'worker' process defined in Procfile on Elastic Beanstalk.
+Polls SQS in a loop and dispatches messages to the local lambda handlers
+(stock_processor, alert_handler), simulating event-driven architecture on EB.
+
+Fixes vs original:
+- Uses 'stocks' logger (captured in web.stdout.log under EB)
+- Removed duplicate signal handler setup
+- Added exponential backoff on credential failures
+- Added per-loop AWS credential recheck after expiry window
+- Clear log messages indicate WHY the worker is waiting
 """
 
 import time
@@ -11,112 +18,187 @@ import json
 import logging
 import signal
 import sys
+
 from django.core.management.base import BaseCommand
 
 from stocks.services.sqs_service import SQSService
+from stocks.services.aws_session import check_aws_available
 
-# Import the lambda handlers
+# Import the lambda handlers (run locally on EB, or by real Lambda on AWS)
 from stocks.lambda_functions.stock_processor import lambda_handler as stock_handler
 from stocks.lambda_functions.alert_handler import lambda_handler as alert_handler
 
-logger = logging.getLogger('django')
+logger = logging.getLogger('stocks')
+
+# How often (in seconds) to revalidate AWS credentials while the worker is running.
+# AWS Academy tokens last ~4-6h; checking every 30 min catches expiry early.
+CREDENTIAL_RECHECK_INTERVAL = 1800  # 30 minutes
+
 
 class Command(BaseCommand):
-    help = "Continuously poll SQS and process messages locally (Elastic Beanstalk Worker)"
+    help = "Continuously poll SQS and process stock/alert events (EB Worker process)"
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS("Starting SQS Poller... Press Ctrl+C to stop."))
-        
-        sqs = SQSService()
-        
-        # Setup graceful shutdown
+        logger.info("=" * 60)
+        logger.info("SQS Poller starting (Elastic Beanstalk worker process).")
+        logger.info("=" * 60)
+        self.stdout.write(self.style.SUCCESS("SQS Poller starting..."))
+
+        # ── Graceful shutdown ─────────────────────────────────────────────
         self.running = True
-        def handle_sigint(signum, frame):
+
+        def _shutdown(signum, frame):
+            logger.info("SQS Poller received shutdown signal — stopping gracefully.")
             self.stdout.write(self.style.WARNING("\nStopping SQS Poller gracefully..."))
             self.running = False
-        signal.signal(signal.SIGINT, handle_sigint)
-        signal.signal(signal.SIGTERM, handle_sigint)
 
-        # Instead of exiting if SQS is unavailable (which crashes the EB deployment), 
-        # we will wait for credentials to be provided.
-        queue_url = None
-        while self.running and not queue_url:
-            if not sqs.available:
-                self.stdout.write(self.style.ERROR("SQS not available. Waiting 30s..."))
-            else:
-                queue_url = sqs.get_queue_url()
-                if not queue_url:
-                    self.stdout.write(self.style.ERROR("SQS Queue not found (bad credentials?). Waiting 30s..."))
-            
-            if not queue_url:
-                time.sleep(30)
-                # Re-initialize to pickup potentially new env vars (though systemd restart is usually needed)
-                sqs = SQSService()
+        signal.signal(signal.SIGINT, _shutdown)
+        signal.signal(signal.SIGTERM, _shutdown)
 
-        if not self.running:
+        # ── Wait until AWS credentials are valid ──────────────────────────
+        # Credentials may not yet be available right after EB starts, or they
+        # may have expired mid-session (AWS Academy tokens last ~4-6 hours).
+        sqs, queue_url = self._wait_for_valid_credentials_and_queue()
+        if sqs is None or not self.running:
+            logger.warning("SQS Poller exiting — no valid credentials or queue found.")
             return
 
+        logger.info(f"SQS Poller ready. Listening on: {queue_url}")
         self.stdout.write(self.style.SUCCESS(f"Listening on queue: {queue_url}"))
 
-        # Setup graceful shutdown
-        self.running = True
-        def handle_sigint(signum, frame):
-            self.stdout.write(self.style.WARNING("\nStopping SQS Poller gracefully..."))
-            self.running = False
-        signal.signal(signal.SIGINT, handle_sigint)
-        signal.signal(signal.SIGTERM, handle_sigint)
+        # ── Main polling loop ─────────────────────────────────────────────
+        last_credential_check = time.time()
+        consecutive_errors = 0
 
         while self.running:
             try:
-                # Receive up to 5 messages with 10 seconds long polling
+                # Periodically re-validate credentials (catches mid-session expiry)
+                if time.time() - last_credential_check > CREDENTIAL_RECHECK_INTERVAL:
+                    if not check_aws_available():
+                        logger.error(
+                            "AWS credentials EXPIRED mid-session. "
+                            "Update them in EB Console → Configuration → Software → "
+                            "Environment Properties, then restart the worker."
+                        )
+                        # Keep checking every 60s until refreshed (EB restart required)
+                        time.sleep(60)
+                        sqs = SQSService()
+                        continue
+                    last_credential_check = time.time()
+                    logger.info("Periodic credential recheck: still valid.")
+
+                # Receive up to 5 messages with 10-second long polling
                 messages = sqs.receive_message(max_messages=5, wait_time=10)
-                
+                consecutive_errors = 0  # Reset on success
+
                 for msg in messages:
                     receipt_handle = msg.get('receipt_handle')
                     body = msg.get('body')
-                    
+                    msg_id = msg.get('message_id', 'unknown')
+
                     if not body:
-                        self.stdout.write("Skipping empty message...")
+                        logger.warning(f"Empty SQS message body (id={msg_id}) — skipping.")
                         sqs.delete_message(receipt_handle)
                         continue
-                    
-                    # Convert body payload to the format expected by AWS Lambda (Records wrapping stringified JSON body)
+
+                    logger.info(f"Processing SQS message: {msg_id}")
+                    self.stdout.write(f"Processing message: {msg_id}")
+
+                    # Wrap body in Lambda-style Records envelope
                     event_payload = {
                         "Records": [
                             {
                                 "body": json.dumps(body) if isinstance(body, dict) else body,
-                                "messageId": msg.get('message_id')
+                                "messageId": msg_id,
                             }
                         ]
                     }
 
-                    self.stdout.write(f"Processing message: {msg.get('message_id')}")
-
-                    # 1. Process Stock Data and Analytics
+                    # ── 1. Stock Processor ────────────────────────────────
                     try:
                         stock_result = stock_handler(event_payload, None)
-                        self.stdout.write(f"  stock_processor result: {stock_result['statusCode']}")
-                    except Exception as e:
-                        logger.error(f"stock_processor failed: {e}")
-                        self.stdout.write(self.style.ERROR(f"  stock_processor error: {e}"))
+                        status = stock_result.get('statusCode', '?')
+                        logger.info(f"  stock_processor → statusCode={status}")
+                        self.stdout.write(f"  stock_processor: {status}")
+                    except Exception as exc:
+                        logger.error(f"  stock_processor FAILED for msg {msg_id}: {exc}", exc_info=True)
+                        self.stdout.write(self.style.ERROR(f"  stock_processor error: {exc}"))
 
-                    # 2. Process Alerts
+                    # ── 2. Alert Handler ──────────────────────────────────
                     try:
                         alert_result = alert_handler(event_payload, None)
-                        self.stdout.write(f"  alert_handler result: {alert_result['statusCode']}")
-                    except Exception as e:
-                        logger.error(f"alert_handler failed: {e}")
-                        self.stdout.write(self.style.ERROR(f"  alert_handler error: {e}"))
+                        status = alert_result.get('statusCode', '?')
+                        triggered = alert_result.get('body', '{}')
+                        logger.info(f"  alert_handler → statusCode={status}")
+                        self.stdout.write(f"  alert_handler: {status}")
+                    except Exception as exc:
+                        logger.error(f"  alert_handler FAILED for msg {msg_id}: {exc}", exc_info=True)
+                        self.stdout.write(self.style.ERROR(f"  alert_handler error: {exc}"))
 
-                    # Delete message after successful local processing
+                    # ── Delete after processing ───────────────────────────
                     if sqs.delete_message(receipt_handle):
-                        self.stdout.write(self.style.SUCCESS(f"  Deleted message {msg.get('message_id')}"))
+                        logger.info(f"  Deleted SQS message: {msg_id}")
+                        self.stdout.write(self.style.SUCCESS(f"  Deleted: {msg_id}"))
                     else:
-                        self.stdout.write(self.style.WARNING(f"  Failed to delete message {msg.get('message_id')}"))
+                        logger.warning(f"  Could not delete SQS message: {msg_id} — it will reappear.")
 
-            except Exception as e:
-                logger.error(f"Error in SQS Poller: {e}")
-                self.stdout.write(self.style.ERROR(f"Error in SQS Poller: {e}"))
-                time.sleep(5)  # Backoff before retrying
+            except KeyboardInterrupt:
+                self.running = False
+                break
+            except Exception as exc:
+                consecutive_errors += 1
+                backoff = min(5 * consecutive_errors, 60)  # Cap at 60s
+                logger.error(
+                    f"SQS Poller loop error (attempt {consecutive_errors}): {exc} "
+                    f"— retrying in {backoff}s",
+                    exc_info=True
+                )
+                self.stdout.write(self.style.ERROR(f"Poller error: {exc}"))
+                time.sleep(backoff)
 
+        logger.info("SQS Poller stopped.")
         self.stdout.write(self.style.SUCCESS("SQS Poller stopped."))
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _wait_for_valid_credentials_and_queue(self):
+        """
+        Block until AWS credentials are valid and the SQS queue URL is resolvable.
+        Retries every 30 seconds. Returns (SQSService, queue_url) or (None, None).
+        """
+        attempt = 0
+        while self.running:
+            attempt += 1
+            if not check_aws_available():
+                logger.warning(
+                    f"[Attempt {attempt}] AWS credentials invalid or expired. "
+                    "Update AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN "
+                    "in EB Console → Configuration → Software → Environment Properties. "
+                    "Retrying in 30s..."
+                )
+                self.stdout.write(
+                    self.style.ERROR(
+                        f"[{attempt}] AWS credentials not available — waiting 30s..."
+                    )
+                )
+                time.sleep(30)
+                continue
+
+            sqs = SQSService()
+            if not sqs.available:
+                logger.warning(f"[Attempt {attempt}] SQS service unavailable — waiting 30s...")
+                time.sleep(30)
+                continue
+
+            queue_url = sqs.get_queue_url()
+            if queue_url:
+                return sqs, queue_url
+
+            logger.warning(
+                f"[Attempt {attempt}] SQS queue not found. "
+                "Run 'python manage.py init_aws_resources' to create it. "
+                "Retrying in 30s..."
+            )
+            time.sleep(30)
+
+        return None, None

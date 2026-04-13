@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 from botocore.exceptions import ClientError, NoCredentialsError
-from stocks.services.aws_session import get_boto3_session, check_aws_available
+from stocks.services.aws_session import get_boto3_session, check_aws_available, log_aws_error
 
 logger = logging.getLogger('stocks')
 
@@ -92,7 +92,7 @@ class S3Service:
             logger.info(f"Uploaded to S3: s3://{self.bucket_name}/{key}")
             return True
         except ClientError as e:
-            logger.error(f"Error uploading to S3: {e}")
+            log_aws_error(e, f"upload_file s3://{self.bucket_name}/{key}")
             return False
 
     def upload_json_report(self, data: Dict[str, Any], symbol: str,
@@ -184,7 +184,7 @@ class S3Service:
                 })
             return objects
         except ClientError as e:
-            logger.error(f"Error listing S3 objects: {e}")
+            log_aws_error(e, f"list_objects s3://{self.bucket_name}/{prefix}")
             return []
 
     def delete_object(self, key: str) -> bool:

@@ -11,7 +11,7 @@ import logging
 from typing import Optional, Dict, Any, List
 
 from botocore.exceptions import ClientError, NoCredentialsError
-from stocks.services.aws_session import get_boto3_session, check_aws_available
+from stocks.services.aws_session import get_boto3_session, check_aws_available, log_aws_error
 
 logger = logging.getLogger('stocks')
 
@@ -173,7 +173,7 @@ class SNSService:
             logger.info(f"SNS notification published: {subject}")
             return True
         except ClientError as e:
-            logger.error(f"Error publishing SNS message: {e}")
+            log_aws_error(e, f"sns.publish topic={self.topic_name}")
             return False
 
     def publish_alert(self, symbol: str, condition: str,

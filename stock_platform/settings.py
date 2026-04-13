@@ -113,7 +113,7 @@ DYNAMODB_ALERTS_TABLE = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
 DYNAMODB_ANALYTICS_TABLE = os.getenv('DYNAMODB_ANALYTICS_TABLE', 'analytics_results')
 
 # S3
-S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'stock-platform-reports')
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'stock-platform-reports-2024')
 
 # SQS
 SQS_QUEUE_NAME = os.getenv('SQS_QUEUE_NAME', 'stock-events-queue')
@@ -146,6 +146,7 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'level': 'DEBUG',
         },
         'file': {
             'class': 'logging.FileHandler',
@@ -159,8 +160,14 @@ LOGGING = {
     },
     'loggers': {
         'stocks': {
+            # Both stdout (EB web.stdout.log) and local file
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },
