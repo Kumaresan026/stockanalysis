@@ -281,12 +281,20 @@ class DynamoDBService:
         return self.put_item(table_name, item)
 
     def store_alert_rule(self, alert_id: str, user_id: str, symbol: str,
-                         condition: str, threshold: float) -> bool:
-        """Store an alert rule in DynamoDB."""
+                         condition: str, threshold: float,
+                         username: str = '') -> bool:
+        """
+        Store an alert rule in DynamoDB.
+
+        Stores both user_id and username so alerts can be recovered by
+        username even after EB restarts where user_id may change (because
+        SQLite is wiped and users re-register with new auto-increment IDs).
+        """
         table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
         item = {
-            'alert_id': alert_id,
-            'user_id': user_id,
+            'alert_id': alert_id,          # UUID — stable across restarts
+            'user_id': str(user_id),
+            'username': username,           # stable across restarts
             'symbol': symbol.upper(),
             'condition': condition,
             'threshold': threshold,
@@ -307,16 +315,20 @@ class DynamoDBService:
         }
         return self.put_item(table_name, item)
 
-    def get_user_alerts(self, user_id: str, status: str = 'active') -> List[Dict]:
+    def get_user_alerts(self, user_id: str, status: str = 'active',
+                        username: str = '') -> List[Dict]:
         """
         Fetch alert rules for a specific user from DynamoDB.
 
-        Uses a FilterExpression to query by user_id and status directly in AWS,
-        rather than scanning the full table and filtering in Python.
+        Strategy:
+        1. Query by user_id (fast path — works when user_id hasn't changed)
+        2. If nothing found AND username is provided, query by username
+           (fallback for EB restarts where user_id changed after SQLite wipe)
 
         Args:
             user_id: String representation of the user's primary key.
             status: Alert status to filter by ('active', 'triggered', 'disabled').
+            username: Django username — used as fallback when user_id changes.
 
         Returns:
             List of alert item dicts, or empty list on failure.
@@ -325,20 +337,56 @@ class DynamoDBService:
             return []
 
         table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
-        try:
-            table = self.dynamodb.Table(table_name)
-            response = table.scan(
-                FilterExpression='user_id = :uid AND #st = :status',
-                ExpressionAttributeNames={'#st': 'status'},
-                ExpressionAttributeValues={
-                    ':uid': str(user_id),
-                    ':status': status,
-                },
-            )
-            items = response.get('Items', [])
-            logger.info(f"Fetched {len(items)} {status} alerts for user {user_id} from DynamoDB.")
+
+        def _scan(filter_expr, attr_names, attr_values):
+            try:
+                table = self.dynamodb.Table(table_name)
+                response = table.scan(
+                    FilterExpression=filter_expr,
+                    ExpressionAttributeNames=attr_names,
+                    ExpressionAttributeValues=attr_values,
+                )
+                return response.get('Items', [])
+            except ClientError as e:
+                log_aws_error(e, f"get_user_alerts '{table_name}'")
+                return []
+
+        # 1. Try by user_id first
+        items = _scan(
+            'user_id = :uid AND #st = :status',
+            {'#st': 'status'},
+            {':uid': str(user_id), ':status': status},
+        )
+        if items:
+            logger.info(f"Fetched {len(items)} {status} alerts for user_id={user_id} from DynamoDB.")
             return items
-        except ClientError as e:
-            logger.error(f"Error fetching user alerts from DynamoDB: {e}")
-            return []
+
+        # 2. Fallback: try by username (handles post-EB-restart user_id mismatch)
+        if username:
+            items = _scan(
+                'username = :uname AND #st = :status',
+                {'#st': 'status'},
+                {':uname': username, ':status': status},
+            )
+            if items:
+                logger.info(
+                    f"Fetched {len(items)} {status} alerts by username='{username}' "
+                    f"(user_id fallback — SQLite may have been reset after EB redeploy)."
+                )
+                # Update user_id in DynamoDB to match current session
+                for item in items:
+                    if item.get('user_id') != str(user_id):
+                        try:
+                            table = self.dynamodb.Table(table_name)
+                            table.update_item(
+                                Key={'alert_id': item['alert_id']},
+                                UpdateExpression='SET user_id = :uid',
+                                ExpressionAttributeValues={':uid': str(user_id)},
+                            )
+                        except Exception:
+                            pass
+                return items
+
+        logger.info(f"No {status} alerts found for user_id={user_id} / username='{username}'.")
+        return []
 

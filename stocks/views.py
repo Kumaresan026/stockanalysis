@@ -9,6 +9,7 @@ All views integrate with AWS services via the service layer.
 import json
 import logging
 import os
+import uuid
 from datetime import datetime
 from decimal import Decimal
 
@@ -327,34 +328,50 @@ def alerts_view(request):
     """
     user_id = str(request.user.id)
 
-    # Try DynamoDB first — filtered by user_id directly in AWS
+    # Try DynamoDB first — filtered by both user_id and username (fallback)
     dynamo_alerts = []
     if dynamodb_service.available:
         try:
-            dynamo_alerts = dynamodb_service.get_user_alerts(user_id, status='active')
+            dynamo_alerts = dynamodb_service.get_user_alerts(
+                user_id,
+                status='active',
+                username=request.user.username,
+            )
         except Exception as e:
             logger.warning(f"Could not fetch alerts from DynamoDB: {e}")
 
     # Also get SQLite alerts for display
     sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
+    sqlite_alert_ids = {str(a.id) for a in sqlite_alerts}
+    dynamo_alert_ids = {item.get('alert_id', '') for item in dynamo_alerts}
 
-    # Re-sync: if DynamoDB has alerts the local SQLite doesn't know about, recreate them
-    if dynamo_alerts and not sqlite_alerts:
-        for item in dynamo_alerts:
+    # Re-sync: bring any DynamoDB alerts not in SQLite back into SQLite
+    # This handles: EB restarts, fresh deploys, or DynamoDB-only saves
+    newly_synced = 0
+    for item in dynamo_alerts:
+        item_alert_id = item.get('alert_id', '')
+        if item_alert_id not in sqlite_alert_ids:
             try:
                 stock_obj, _ = Stock.objects.get_or_create(
                     symbol=item.get('symbol', ''),
                     defaults={'name': item.get('symbol', ''), 'current_price': 0},
                 )
-                Alert.objects.get_or_create(
+                new_alert, created = Alert.objects.get_or_create(
                     user=request.user,
                     stock=stock_obj,
                     condition=item.get('condition', ''),
-                    threshold=item.get('threshold', 0),
-                    defaults={'status': item.get('status', 'active')},
+                    defaults={
+                        'threshold': item.get('threshold', 0),
+                        'status': item.get('status', 'active'),
+                    },
                 )
+                if created:
+                    newly_synced += 1
             except Exception as e:
-                logger.warning(f"Could not re-sync alert from DynamoDB: {e}")
+                logger.warning(f"Could not re-sync alert '{item_alert_id}' from DynamoDB: {e}")
+
+    if newly_synced:
+        logger.info(f"Re-synced {newly_synced} alert(s) from DynamoDB into SQLite for user '{request.user.username}'")
         sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
 
     context = {
@@ -399,17 +416,22 @@ def create_alert(request):
                 threshold=threshold,
             )
 
+            # Use a UUID as the stable DynamoDB key — NOT the SQLite auto-increment id.
+            # SQLite ids reset after every EB redeploy; UUIDs are permanent.
+            stable_alert_id = str(uuid.uuid4())
+
             # Primary persistent store: DynamoDB (survives EB redeployments)
             dynamo_ok = dynamodb_service.store_alert_rule(
-                alert_id=str(alert.id),
+                alert_id=stable_alert_id,
                 user_id=str(request.user.id),
+                username=request.user.username,   # fallback for post-restart recovery
                 symbol=symbol,
                 condition=condition,
                 threshold=float(threshold),
             )
             if not dynamo_ok:
                 logger.warning(
-                    f"Alert {alert.id} for {symbol} could not be saved to DynamoDB. "
+                    f"Alert for {symbol} could not be saved to DynamoDB. "
                     "Only SQLite copy exists — it will be lost on next EB deploy."
                 )
 
