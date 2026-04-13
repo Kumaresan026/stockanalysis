@@ -47,29 +47,29 @@ class Command(BaseCommand):
         from stocks.services.aws_session import check_aws_available, get_boto3_session
         if not check_aws_available():
             self.stdout.write(self.style.ERROR(
-                '  ❌ Credentials INVALID — refresh in EB Console then re-run.'
+                '  [X] Credentials INVALID - refresh in EB Console then re-run.'
             ))
             return
-        self.stdout.write(self.style.SUCCESS('  ✅ Credentials valid'))
+        self.stdout.write(self.style.SUCCESS('  [OK] Credentials valid'))
 
         # ── Step 2: SNS Topic & Subscriptions ───────────────────────
         self.stdout.write('\n[2] SNS Email Subscription')
         from stocks.services.sns_service import SNSService
         sns = SNSService()
         if not sns.available:
-            self.stdout.write(self.style.ERROR('  ❌ SNS service unavailable'))
+            self.stdout.write(self.style.ERROR('  [X] SNS service unavailable'))
         else:
             topic_arn = sns.get_topic_arn()
             if not topic_arn:
                 self.stdout.write(self.style.ERROR(
-                    f'  ❌ SNS topic not found. Run: python manage.py init_aws_resources'
+                    f'  [X] SNS topic not found. Run: python manage.py init_aws_resources'
                 ))
             else:
-                self.stdout.write(self.style.SUCCESS(f'  ✅ Topic: {topic_arn}'))
+                self.stdout.write(self.style.SUCCESS(f'  [OK] Topic: {topic_arn}'))
                 subs = sns.list_subscriptions()
                 if not subs:
                     self.stdout.write(self.style.ERROR(
-                        '  ❌ NO SUBSCRIPTIONS — no email will ever be sent!\n'
+                        '  [X] NO SUBSCRIPTIONS - no email will ever be sent!\n'
                         '     Fix: Register/login with a valid email address.\n'
                         '     The app calls sns.subscribe(user.email) on registration and login.'
                     ))
@@ -79,14 +79,14 @@ class Command(BaseCommand):
                         status = sub.get('status', '?')
                         if 'PendingConfirmation' in status:
                             self.stdout.write(self.style.WARNING(
-                                f'  ⚠️  {endpoint}: PENDING CONFIRMATION\n'
-                                f'     → Check your inbox for "AWS Notification - Subscription Confirmation"\n'
-                                f'     → Click the confirmation link in that email\n'
-                                f'     → Without confirmation, NO alerts will be emailed to you!'
+                                f'  [!]  {endpoint}: PENDING CONFIRMATION\n'
+                                f'     -> Check your inbox for "AWS Notification - Subscription Confirmation"\n'
+                                f'     -> Click the confirmation link in that email\n'
+                                f'     -> Without confirmation, NO alerts will be emailed to you!'
                             ))
                         else:
                             self.stdout.write(self.style.SUCCESS(
-                                f'  ✅ {endpoint}: CONFIRMED ✓'
+                                f'  [OK] {endpoint}: CONFIRMED'
                             ))
 
                 # Optional: send a direct test email
@@ -94,29 +94,29 @@ class Command(BaseCommand):
                     self.stdout.write(f'\n  Subscribing {email} to SNS topic...')
                     sns.subscribe(email)
                     self.stdout.write(self.style.WARNING(
-                        f'  ⚠️  Check your inbox for AWS confirmation email for {email}\n'
+                        f'  [!]  Check your inbox for AWS confirmation email for {email}\n'
                         f'     You MUST click the link before any alerts are delivered.'
                     ))
 
                 self.stdout.write(f'\n  Sending direct SNS test email...')
                 ok = sns.publish(
-                    subject=f'TEST: Alert Pipeline Working — {symbol}',
+                    subject=f'TEST: Alert Pipeline Working - {symbol}',
                     message=(
                         f'This is a test notification from python manage.py test_alert.\n'
                         f'If you received this email, SNS is working correctly.\n\n'
                         f'Symbol tested: {symbol}\n'
                         f'Price used:    {price if price else "(not specified)"}\n'
                         f'Time (UTC):    {__import__("datetime").datetime.utcnow()}\n\n'
-                        f'— Cloud Stock Market Analysis Platform'
+                        f'- Cloud Stock Market Analysis Platform'
                     )
                 )
                 if ok:
                     self.stdout.write(self.style.SUCCESS(
-                        '  ✅ Direct SNS publish succeeded — check your inbox!'
+                        '  [OK] Direct SNS publish succeeded - check your inbox!'
                     ))
                 else:
                     self.stdout.write(self.style.ERROR(
-                        '  ❌ Direct SNS publish FAILED — see logs above for reason'
+                        '  [X] Direct SNS publish FAILED - see logs above for reason'
                     ))
 
         # ── Step 3: DynamoDB Active Alerts ───────────────────────────
@@ -134,18 +134,18 @@ class Command(BaseCommand):
             rules = resp.get('Items', [])
             if not rules:
                 self.stdout.write(self.style.WARNING(
-                    f'  ⚠️  No active alert rules found for {symbol}.\n'
+                    f'  [!]  No active alert rules found for {symbol}.\n'
                     f'     Create alerts in the web UI first.'
                 ))
             else:
-                self.stdout.write(self.style.SUCCESS(f'  ✅ Found {len(rules)} active rule(s):'))
+                self.stdout.write(self.style.SUCCESS(f'  [OK] Found {len(rules)} active rule(s):'))
                 for r in rules:
                     self.stdout.write(
-                        f'     • {r.get("condition")} ${float(r.get("threshold",0)):.2f} '
+                        f'     * {r.get("condition")} ${float(r.get("threshold",0)):.2f} '
                         f'[user_id={r.get("user_id")} username={r.get("username","")}]'
                     )
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'  ❌ DynamoDB scan failed: {e}'))
+            self.stdout.write(self.style.ERROR(f'  [X] DynamoDB scan failed: {e}'))
             rules = []
 
         # ── Step 4: Evaluate Alerts ───────────────────────────────────
@@ -162,13 +162,13 @@ class Command(BaseCommand):
             )
             if triggered:
                 self.stdout.write(self.style.SUCCESS(
-                    f'  ✅ {len(triggered)} alert(s) TRIGGERED!\n'
-                    + '\n'.join(f'     • {t["condition"]} @ {t["threshold"]}' for t in triggered)
+                    f'  [OK] {len(triggered)} alert(s) TRIGGERED!\n'
+                    + '\n'.join(f'     * {t["condition"]} @ {t["threshold"]}' for t in triggered)
                 ))
             else:
                 current = price
                 self.stdout.write(self.style.WARNING(
-                    f'  ℹ️  No alerts triggered for {symbol} @ ${current}.\n'
+                    f'  [INFO] No alerts triggered for {symbol} @ ${current}.\n'
                     f'  Check: are the thresholds set correctly for this price?'
                 ))
         elif not price:

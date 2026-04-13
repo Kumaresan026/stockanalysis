@@ -451,9 +451,14 @@ def create_alert(request):
             current_price = float(stock_data.get('price', 0))
             user_email    = request.user.email
 
-            if user_email and sns_service.available:
-                # Ensure the user is subscribed
-                sns_service.subscribe(user_email)
+            if sns_service.available:
+                # If user has an email on their account, subscribe it to SNS.
+                # AWS SNS subscribe is idempotent — safe to call every time.
+                if user_email:
+                    try:
+                        sns_service.subscribe(user_email)
+                    except Exception:
+                        pass  # best-effort — publish still goes to confirmed subscribers
 
                 # Human-readable condition explanation
                 condition_map = {
@@ -465,7 +470,10 @@ def create_alert(request):
                 }
                 condition_text = condition_map.get(condition, f'{condition} {threshold}')
 
-                confirmation_subject = f"Alert Set: {symbol} {condition.replace('_', ' ').title()} ${float(threshold):.2f}"
+                confirmation_subject = (
+                    f"Alert Set: {symbol} {condition.replace('_', ' ').title()}"
+                    f" ${float(threshold):.2f}"
+                )
                 confirmation_message = (
                     f"Hi {request.user.username},\n\n"
                     f"Your stock alert has been set successfully!\n"
@@ -477,8 +485,8 @@ def create_alert(request):
                     f"  You will receive an email when {symbol} {condition_text}.\n\n"
                     f"{'=' * 50}\n"
                     f"Manage your alerts: https://{request.get_host()}/alerts/\n\n"
-                    f"— Cloud Stock Market Analysis Platform\n"
-                    f"  Powered by AWS SNS"
+                    f"-- Cloud Stock Market Analysis Platform\n"
+                    f"   Powered by AWS SNS"
                 )
 
                 ok = sns_service.publish(
