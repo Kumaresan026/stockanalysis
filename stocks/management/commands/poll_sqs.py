@@ -22,7 +22,10 @@ import sys
 from django.core.management.base import BaseCommand
 
 from stocks.services.sqs_service import SQSService
+from stocks.services.dynamodb_service import DynamoDBService
+from stocks.services.sns_service import SNSService
 from stocks.services.aws_session import check_aws_available
+from stocks.services.alert_evaluator import evaluate_and_notify
 
 # Import the lambda handlers (run locally on EB, or by real Lambda on AWS)
 from stocks.lambda_functions.stock_processor import lambda_handler as stock_handler
@@ -43,6 +46,10 @@ class Command(BaseCommand):
         logger.info("SQS Poller starting (Elastic Beanstalk worker process).")
         logger.info("=" * 60)
         self.stdout.write(self.style.SUCCESS("SQS Poller starting..."))
+
+        # Initialise service instances (used by evaluate_and_notify)
+        self._dynamodb = DynamoDBService()
+        self._sns = SNSService()
 
         # ── Graceful shutdown ─────────────────────────────────────────────
         self.running = True
@@ -124,16 +131,29 @@ class Command(BaseCommand):
                         logger.error(f"  stock_processor FAILED for msg {msg_id}: {exc}", exc_info=True)
                         self.stdout.write(self.style.ERROR(f"  stock_processor error: {exc}"))
 
-                    # ── 2. Alert Handler ──────────────────────────────────
+                    # ── 2. Alert Handler (Lambda-based) ──────────────────
                     try:
                         alert_result = alert_handler(event_payload, None)
                         status = alert_result.get('statusCode', '?')
-                        triggered = alert_result.get('body', '{}')
                         logger.info(f"  alert_handler → statusCode={status}")
                         self.stdout.write(f"  alert_handler: {status}")
                     except Exception as exc:
                         logger.error(f"  alert_handler FAILED for msg {msg_id}: {exc}", exc_info=True)
                         self.stdout.write(self.style.ERROR(f"  alert_handler error: {exc}"))
+
+                    # ── 3. In-process alert evaluation (safety net) ───────
+                    # Runs even if Lambda invocation fails or is not deployed.
+                    body_dict = json.loads(body) if isinstance(body, str) else body
+                    sym = body_dict.get('symbol', '')
+                    if sym:
+                        evaluate_and_notify(
+                            symbol=sym,
+                            price=float(body_dict.get('price', 0)),
+                            volume=int(body_dict.get('volume', 0)),
+                            change_percent=float(body_dict.get('change_percent', 0)),
+                            dynamodb_service=self._dynamodb,
+                            sns_service=self._sns,
+                        )
 
                     # ── Delete after processing ───────────────────────────
                     if sqs.delete_message(receipt_handle):

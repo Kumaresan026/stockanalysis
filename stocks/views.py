@@ -34,6 +34,7 @@ from stocks.services.s3_service import S3Service
 from stocks.services.sqs_service import SQSService
 from stocks.services.sns_service import SNSService
 from stocks.services.cloudwatch_service import CloudWatchService
+from stocks.services.alert_evaluator import evaluate_and_notify
 from stocks.events.producer import StockEventProducer
 from stocks.analytics.indicators import StockIndicatorService
 from stocks.services.lambda_service import LambdaService
@@ -89,6 +90,21 @@ def dashboard(request):
             data = api_service.get_stock_quote(entry.stock.symbol)
             watchlist_stocks.append(data)
 
+    # Evaluate alerts for all stocks shown on the dashboard
+    # This ensures alerts fire even if the user never visits a stock's detail page.
+    all_dashboard_stocks = gainers + losers
+    for stock_data in all_dashboard_stocks:
+        sym = stock_data.get('symbol', '')
+        if sym:
+            evaluate_and_notify(
+                symbol=sym,
+                price=stock_data.get('price', 0),
+                volume=stock_data.get('volume', 0),
+                change_percent=stock_data.get('change_percent', 0),
+                dynamodb_service=dynamodb_service,
+                sns_service=sns_service,
+            )
+
     context = {
         'gainers': gainers,
         'losers': losers,
@@ -128,8 +144,19 @@ def stock_detail(request, symbol):
         change_percent=stock_data.get('change_percent', 0),
     )
 
-    # Step 3: Invoke stock_processor Lambda directly (also pushed to SQS for async)
-    # Lambda handles: DynamoDB update, analytics, S3 upload, and alert evaluation via SNS
+    # Step 3: Evaluate alerts directly (in-process, no Lambda dependency)
+    # This fires every time any user views this stock's detail page.
+    evaluate_and_notify(
+        symbol=symbol,
+        price=stock_data.get('price', 0),
+        volume=stock_data.get('volume', 0),
+        change_percent=stock_data.get('change_percent', 0),
+        dynamodb_service=dynamodb_service,
+        sns_service=sns_service,
+    )
+
+    # Step 4: Also invoke Lambda asynchronously (if deployed) for analytics pipeline
+    # This is fire-and-forget — failure here does NOT affect alert evaluation above
     lambda_service.invoke_stock_processor(
         symbol=symbol,
         price=stock_data.get('price', 0),
@@ -142,7 +169,7 @@ def stock_detail(request, symbol):
         symbol, stock_data.get('source', 'unknown'), True
     )
 
-    # Step 4: Compute analytics
+    # Step 5: Compute analytics
     prices = [d['close'] for d in history] if history else []
     analytics = {}
     if prices:
