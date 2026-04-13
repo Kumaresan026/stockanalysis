@@ -93,10 +93,12 @@ def dashboard(request):
 
     # Evaluate alerts for all stocks shown on the dashboard
     # This ensures alerts fire even if the user never visits a stock's detail page.
-    all_dashboard_stocks = gainers + losers
+    all_dashboard_stocks = gainers + losers + watchlist_stocks
+    seen_symbols = set()
     for stock_data in all_dashboard_stocks:
         sym = stock_data.get('symbol', '')
-        if sym:
+        if sym and sym not in seen_symbols:
+            seen_symbols.add(sym)
             evaluate_and_notify(
                 symbol=sym,
                 price=stock_data.get('price', 0),
@@ -581,6 +583,20 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
+
+            # Re-subscribe user's email to SNS on every login.
+            # Handles the case where: (a) the initial subscribe on registration
+            # failed because credentials were expired at that moment, or (b)
+            # the AWS Academy session was refreshed and SNS topic was recreated.
+            # AWS SNS subscribe is idempotent — calling it again on an already-
+            # confirmed subscription does nothing.
+            if user.email and sns_service.available:
+                try:
+                    sns_service.subscribe(user.email)
+                    logger.info(f"SNS subscription refreshed for {user.email}")
+                except Exception as e:
+                    logger.warning(f"SNS re-subscribe failed for {user.email}: {e}")
+
             cloudwatch_service.log_system_event(
                 'USER_LOGIN', f"User: {username}"
             )

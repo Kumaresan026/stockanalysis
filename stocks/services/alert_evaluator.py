@@ -126,7 +126,8 @@ def evaluate_and_notify(symbol: str, price: float, volume: int,
         _mark_triggered(dynamodb_service, table_name, alert_id, symbol, price, condition, threshold)
 
         # ── Also mark in Django SQLite (so UI updates to "triggered") ──
-        _mark_triggered_sqlite(alert_id, user_id)
+        _mark_triggered_sqlite(alert_id, user_id, symbol=symbol,
+                               condition=condition, threshold=threshold)
 
         # ── Send SNS email notification ───────────────────────────────
         _send_sns_notification(sns_service, symbol, condition, threshold, price, user_id)
@@ -168,22 +169,42 @@ def _mark_triggered(dynamodb_service, table_name: str, alert_id: str,
         logger.error(f"[AlertEval] Failed to mark alert {alert_id} as triggered in DynamoDB: {e}")
 
 
-def _mark_triggered_sqlite(alert_id: str, user_id: str):
-    """Mark the corresponding Django SQLite Alert as triggered so the UI updates."""
-    if not alert_id:
-        return
+def _mark_triggered_sqlite(alert_id: str, user_id: str,
+                           symbol: str = '', condition: str = '',
+                           threshold: float = 0):
+    """
+    Mark the corresponding Django SQLite Alert as triggered so the UI updates.
+
+    IMPORTANT: alert_id is now a UUID (not an SQLite integer pk).
+    We match by symbol + condition instead of by pk.
+    """
     try:
         from django.utils import timezone
         from stocks.models import Alert
-        updated = Alert.objects.filter(id=int(alert_id)).update(
+        from django.contrib.auth.models import User
+
+        # Match by user + symbol + condition (most specific match available)
+        qs = Alert.objects.filter(
+            stock__symbol=symbol.upper(),
+            condition=condition,
+            status='active',
+        )
+        if user_id:
+            try:
+                qs = qs.filter(user_id=int(user_id))
+            except (ValueError, TypeError):
+                pass  # user_id might not be an int in edge cases
+
+        updated = qs.update(
             status='triggered',
             triggered_at=timezone.now(),
         )
         if updated:
-            logger.info(f"[AlertEval] SQLite: marked alert {alert_id} as triggered")
+            logger.info(f"[AlertEval] SQLite: marked {updated} alert(s) triggered "
+                        f"for {symbol} {condition}")
     except Exception as e:
         # SQLite update is best-effort — DynamoDB is the true source of truth
-        logger.debug(f"[AlertEval] SQLite update skipped for alert {alert_id}: {e}")
+        logger.debug(f"[AlertEval] SQLite update skipped: {e}")
 
 
 def _send_sns_notification(sns_service, symbol: str, condition: str,
