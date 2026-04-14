@@ -73,25 +73,52 @@ def _invalidate_aws_cache() -> None:
 
 # ── Session factory ────────────────────────────────────────────────────────
 
+def _make_iam_role_session(region: str) -> boto3.Session:
+    """
+    Create a boto3 Session that SKIPS environment variable credentials.
+
+    Even when boto3.Session() is called without explicit credentials, it
+    still reads AWS_ACCESS_KEY_ID etc. from os.environ as part of its
+    automatic credential chain. If those env vars contain placeholder strings
+    (e.g. 'REPLACE_IN_EB_CONSOLE'), every API call fails.
+
+    This function removes the 'env' credential provider from botocore's
+    resolver before creating the session, so boto3 skips env vars entirely
+    and falls through directly to the EC2 instance profile (LabRole).
+    """
+    import botocore.session as bc_session
+
+    bc = bc_session.get_session()
+    resolver = bc.get_component('credential_provider')
+    try:
+        resolver.remove('env')      # skip AWS_ACCESS_KEY_ID env var lookup
+    except Exception:
+        pass                        # safe to ignore if already removed
+
+    logger.debug("IAM role mode: env credential provider removed, using instance profile.")
+    return boto3.Session(botocore_session=bc, region_name=region)
+
+
 def get_boto3_session() -> boto3.Session:
     """
     Return a boto3.Session appropriate for the current environment.
 
     Mode A — Explicit credentials (local dev / AWS Academy):
-      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set to real values.
-      Passes them explicitly so the session token is always included.
+      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set to REAL (non-
+      placeholder) values. Passes them explicitly including session token.
 
     Mode B — IAM role (Elastic Beanstalk with LabRole attached):
-      Env vars are absent or still contain the placeholder string.
-      Returns boto3.Session() without credentials; boto3 automatically
-      discovers the EC2 instance profile via the metadata service.
+      Env vars are absent, empty, or set to a placeholder string such as
+      'REPLACE_IN_EB_CONSOLE'. Uses _make_iam_role_session() which removes
+      the botocore env credential provider so boto3 goes straight to the
+      EC2 instance metadata service (LabRole).
 
     Region always comes from AWS_DEFAULT_REGION (default: us-east-1).
     """
     region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
 
     if _using_explicit_credentials():
-        session_token = os.getenv('AWS_SESSION_TOKEN') or None  # '' → None
+        session_token = os.getenv('AWS_SESSION_TOKEN') or None  # '' -> None
         return boto3.Session(
             aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
             aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
@@ -99,9 +126,8 @@ def get_boto3_session() -> boto3.Session:
             region_name=region,
         )
 
-    # No explicit credentials — let the boto3 credential chain find the role
-    logger.debug("No explicit AWS credentials — using IAM role / instance profile.")
-    return boto3.Session(region_name=region)
+    # Placeholder / absent credentials — bypass env vars, use IAM role
+    return _make_iam_role_session(region)
 
 
 # ── Credential availability check (cached) ────────────────────────────────
