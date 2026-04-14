@@ -1,0 +1,38 @@
+Metadata-Version: 2.4
+Name: stock-event-engine
+Version: 0.1.0
+Summary: Event-driven stock analytics and alert engine
+Author: Kumaresan
+Author-email: kumaresan2126@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Office/Business :: Financial :: Investment
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: pandas>=2.0.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Stock Event Engine
+
+A Python library for:
+- Stock signals
+- Alerts (SNS)
+- Portfolio tracking
+
+## Installation
+
+pip install stock-event-engine
+
+## Usage
+
+from stock_event_engine.signals import generate_signal
