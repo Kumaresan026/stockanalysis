@@ -2,10 +2,11 @@
 Lambda Function: alert_handler
 
 Evaluates alert rules against current stock data.
-If an alert condition is met, triggers an SNS notification.
+If an alert condition is met, publishes an SNS notification.
 
-Designed to be deployed as an AWS Lambda function,
-triggered by SQS or invoked directly via boto3.
+Deployed to AWS Lambda with LabRole IAM role.
+boto3 clients are initialized LAZILY (not at module level)
+to avoid credential errors when imported locally by Django.
 """
 
 import json
@@ -16,290 +17,279 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Any, List
 
-import boto3
 from botocore.exceptions import ClientError
 
-# Import stock_event_engine for alert evaluation
 try:
     from stock_event_engine.alerts import AlertEngine, AlertRule
     from stock_event_engine.exceptions import AlertEvaluationError
 except ImportError:
     AlertEngine = None
-    AlertRule = None
+    AlertRule   = None
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize AWS clients
-dynamodb = boto3.resource('dynamodb', region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
-sns_client = boto3.client('sns', region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
-cloudwatch_logs = boto3.client('logs', region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
+_LOG_FORMAT = "[{service}] [{action}] [{status}] {detail}"
 
+
+def _log(service, action, status, detail=""):
+    """Structured CloudWatch log entry."""
+    logger.info(_LOG_FORMAT.format(
+        service=service, action=action, status=status, detail=detail
+    ))
+
+
+# ── Lazy AWS client cache ─────────────────────────────────────────────────────
+
+_region          = None
+_dynamodb_resource = None
+_sns_client      = None
+
+
+def _get_region():
+    global _region
+    if _region is None:
+        _region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+    return _region
+
+
+def _get_dynamodb():
+    global _dynamodb_resource
+    if _dynamodb_resource is None:
+        import boto3
+        _dynamodb_resource = boto3.resource("dynamodb", region_name=_get_region())
+        _log("DynamoDB", "CLIENT_INIT", "OK", f"region={_get_region()}")
+    return _dynamodb_resource
+
+
+def _get_sns():
+    global _sns_client
+    if _sns_client is None:
+        import boto3
+        _sns_client = boto3.client("sns", region_name=_get_region())
+        _log("SNS", "CLIENT_INIT", "OK", f"region={_get_region()}")
+    return _sns_client
+
+
+# ── Lambda Entry Point ────────────────────────────────────────────────────────
 
 def lambda_handler(event, context):
     """
-    Lambda entry point — evaluates stock alerts.
+    Lambda entry point — evaluates active alert rules.
 
-    Can be triggered by:
-    1. SQS event (primary) — when stock data updates
-    2. Direct invocation via boto3.invoke() — for testing
-
-    Args:
-        event: SQS event with Records, or direct invocation payload.
-        context: Lambda context.
-
-    Returns:
-        Processing result with triggered alerts.
+    Accepts two payload formats:
+    1. Direct invocation: { "symbol": "AAPL", "price": 180, ... }
+    2. SQS records: { "Records": [ { "body": "{...}" } ] }
     """
-    start_time = time.time()
+    start_time      = time.time()
     triggered_alerts = []
-    processed = 0
+    processed        = 0
 
+    _log("Lambda", "INVOKED", "START", f"keys={list(event.keys())}")
     logger.info("alert_handler Lambda invoked.")
 
-    # Handle SQS event format
-    records = event.get('Records', [])
-    if records:
-        for record in records:
-            try:
-                body = json.loads(record.get('body', '{}'))
-                result = evaluate_alerts_for_stock(body)
-                triggered_alerts.extend(result)
-                processed += 1
-            except Exception as e:
-                logger.error(f"Error processing alert record: {e}")
-    else:
-        # Direct invocation
-        try:
-            result = evaluate_alerts_for_stock(event)
-            triggered_alerts.extend(result)
-            processed += 1
-        except Exception as e:
-            logger.error(f"Error in direct invocation: {e}")
+    # Parse payload (support both direct invoke and SQS format)
+    payloads = _extract_payloads(event)
 
-    # Send SNS notifications for triggered alerts
-    for alert in triggered_alerts:
-        send_alert_notification(alert)
+    for payload in payloads:
+        symbol     = payload.get("symbol", "")
+        price      = float(payload.get("price", 0))
+        volume     = int(payload.get("volume", 0))
+        change_pct = float(payload.get("change_percent", 0))
+
+        _log("Lambda", "EVALUATING_ALERTS", "START",
+             f"symbol={symbol} price={price}")
+
+        alert_rules = fetch_alert_rules(symbol)
+        _log("DynamoDB", "RULES_FETCHED", "OK",
+             f"symbol={symbol} count={len(alert_rules)}")
+
+        if not alert_rules:
+            logger.info(f"No active alert rules for {symbol}.")
+            processed += 1
+            continue
+
+        for rule in alert_rules:
+            triggered = evaluate_rule(rule, price, volume, change_pct)
+            if triggered:
+                result = send_sns_notification(rule, symbol, price)
+                if result:
+                    triggered_alerts.append({
+                        "alert_id":  rule.get("alert_id"),
+                        "symbol":    symbol,
+                        "condition": rule.get("condition"),
+                        "threshold": rule.get("threshold"),
+                        "price":     price,
+                    })
+                    mark_triggered(rule.get("alert_id"))
+
+        processed += 1
 
     duration_ms = int((time.time() - start_time) * 1000)
-
-    logger.info(
-        f"alert_handler completed: {processed} events processed, "
-        f"{len(triggered_alerts)} alerts triggered, "
-        f"duration: {duration_ms}ms"
-    )
+    _log("Lambda", "INVOKED", "DONE",
+         f"payloads={processed} triggered={len(triggered_alerts)} duration_ms={duration_ms}")
 
     return {
-        'statusCode': 200,
-        'body': json.dumps({
-            'processed': processed,
-            'triggered_count': len(triggered_alerts),
-            'triggered_alerts': triggered_alerts,
-            'duration_ms': duration_ms,
-        }, default=str)
+        "statusCode": 200,
+        "body": json.dumps({
+            "processed":        processed,
+            "triggered_alerts": len(triggered_alerts),
+            "duration_ms":      duration_ms,
+            "alerts":           triggered_alerts,
+        }),
     }
 
 
-def evaluate_alerts_for_stock(event_data: Dict[str, Any]) -> List[Dict]:
-    """
-    Evaluate all alert rules for a given stock.
+# ── Payload Parsing ───────────────────────────────────────────────────────────
 
-    1. Get the stock symbol and current price from the event
-    2. Fetch all active alert rules for this symbol from DynamoDB
-    3. Evaluate each rule using stock_event_engine.AlertEngine
-    4. Return list of triggered alerts
+def _extract_payloads(event: Dict) -> List[Dict]:
+    """Extract one or more stock data payloads from the event."""
+    if "Records" in event:
+        payloads = []
+        for record in event["Records"]:
+            body = record.get("body", "{}")
+            payloads.append(json.loads(body) if isinstance(body, str) else body)
+        return payloads
+    # Direct invocation
+    return [event]
 
-    Args:
-        event_data: Event payload with symbol and price.
 
-    Returns:
-        List of triggered alert dictionaries.
-    """
-    symbol = event_data.get('symbol', '').upper()
-    price = float(event_data.get('price', 0))
-    volume = int(event_data.get('volume', 0))
-    change_pct = float(event_data.get('change_percent', 0))
-
-    if not symbol or price <= 0:
-        logger.warning(f"Invalid event data: {event_data}")
-        return []
-
-    # Fetch active alerts for this symbol from DynamoDB
-    alert_rules = fetch_alert_rules(symbol)
-    if not alert_rules:
-        logger.info(f"No active alerts for {symbol}")
-        return []
-
-    triggered = []
-
-    # Build stock data dict for AlertEngine
-    stock_data = {
-        symbol: {
-            'price': price,
-            'volume': volume,
-            'change_percent': change_pct,
-        }
-    }
-
-    if AlertEngine and AlertRule:
-        # Use stock_event_engine for evaluation
-        engine = AlertEngine()
-        for rule_data in alert_rules:
-            try:
-                rule = AlertRule(
-                    symbol=rule_data['symbol'],
-                    condition=rule_data['condition'],
-                    threshold=float(rule_data['threshold']),
-                    user_id=rule_data.get('user_id', ''),
-                )
-                engine.add_rule(rule)
-            except Exception as e:
-                logger.error(f"Invalid alert rule: {e}")
-
-        triggered_results = engine.evaluate(stock_data)
-        for result in triggered_results:
-            triggered.append({
-                'symbol': symbol,
-                'condition': result['rule']['condition'],
-                'threshold': result['rule']['threshold'],
-                'current_price': price,
-                'message': result['message'],
-                'user_id': result['rule']['user_id'],
-                'triggered_at': datetime.utcnow().isoformat(),
-            })
-
-            # Update alert status in DynamoDB
-            mark_alert_triggered(
-                result['rule'].get('alert_id', ''),
-                symbol,
-                result['message']
-            )
-    else:
-        # Fallback: simple evaluation without library
-        for rule_data in alert_rules:
-            condition = rule_data.get('condition', '')
-            threshold = float(rule_data.get('threshold', 0))
-
-            is_triggered = False
-            if condition == 'PRICE_ABOVE' and price > threshold:
-                is_triggered = True
-            elif condition == 'PRICE_BELOW' and price < threshold:
-                is_triggered = True
-
-            if is_triggered:
-                triggered.append({
-                    'symbol': symbol,
-                    'condition': condition,
-                    'threshold': threshold,
-                    'current_price': price,
-                    'message': f"{symbol} {condition} threshold {threshold} (current: {price})",
-                    'user_id': rule_data.get('user_id', ''),
-                    'triggered_at': datetime.utcnow().isoformat(),
-                })
-
-    logger.info(f"Evaluated {len(alert_rules)} alerts for {symbol}: "
-                f"{len(triggered)} triggered")
-
-    return triggered
-
+# ── DynamoDB ──────────────────────────────────────────────────────────────────
 
 def fetch_alert_rules(symbol: str) -> List[Dict]:
-    """Fetch active alert rules for a symbol from DynamoDB."""
+    """
+    Scan alert_rules DynamoDB table for active rules matching symbol.
+    (Full table scan with filter — acceptable for small alert volumes.)
+    """
+    table_name = os.getenv("DYNAMODB_ALERTS_TABLE", "alert_rules")
     try:
-        table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
-        table = dynamodb.Table(table_name)
-
-        # Scan for alerts matching this symbol
-        # (In production, use a GSI for efficient querying)
+        import boto3.dynamodb.conditions as cond
+        table    = _get_dynamodb().Table(table_name)
         response = table.scan(
-            FilterExpression='symbol = :sym AND #st = :status',
-            ExpressionAttributeNames={'#st': 'status'},
-            ExpressionAttributeValues={
-                ':sym': symbol,
-                ':status': 'active',
-            },
+            FilterExpression=(
+                cond.Attr("symbol").eq(symbol) &
+                cond.Attr("status").eq("active")
+            )
         )
-        return response.get('Items', [])
+        rules = response.get("Items", [])
+        _log("DynamoDB", "SCAN_ALERT_RULES", "OK",
+             f"table={table_name} symbol={symbol} found={len(rules)}")
+        return rules
     except ClientError as e:
-        logger.error(f"Error fetching alert rules: {e}")
+        _log("DynamoDB", "SCAN_ALERT_RULES", "ERROR", str(e))
+        logger.error(f"DynamoDB fetch_alert_rules error: {e}")
         return []
 
 
-def mark_alert_triggered(alert_id: str, symbol: str, message: str):
+def mark_triggered(alert_id: str):
     """Update alert status to 'triggered' in DynamoDB."""
     if not alert_id:
         return
-
+    table_name = os.getenv("DYNAMODB_ALERTS_TABLE", "alert_rules")
     try:
-        table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
-        table = dynamodb.Table(table_name)
+        table = _get_dynamodb().Table(table_name)
         table.update_item(
-            Key={'alert_id': alert_id},
-            UpdateExpression='SET #st = :status, triggered_at = :ts, message = :msg',
-            ExpressionAttributeNames={'#st': 'status'},
+            Key={"alert_id": alert_id},
+            UpdateExpression="SET #s = :s, triggered_at = :t",
+            ExpressionAttributeNames={"#s": "status"},
             ExpressionAttributeValues={
-                ':status': 'triggered',
-                ':ts': datetime.utcnow().isoformat(),
-                ':msg': message,
+                ":s": "triggered",
+                ":t": datetime.utcnow().isoformat(),
             },
         )
+        _log("DynamoDB", "MARK_TRIGGERED", "OK", f"alert_id={alert_id}")
     except ClientError as e:
-        logger.error(f"Error updating alert status: {e}")
+        _log("DynamoDB", "MARK_TRIGGERED", "ERROR", str(e))
+        logger.error(f"DynamoDB mark_triggered error: {e}")
 
 
-def send_alert_notification(alert: Dict[str, Any]):
-    """Send an SNS notification for a triggered alert."""
+# ── Alert Evaluation ──────────────────────────────────────────────────────────
+
+def evaluate_rule(rule: Dict, price: float, volume: int, change_pct: float) -> bool:
+    """
+    Evaluate a single alert rule against current market data.
+
+    Supported conditions:
+        PRICE_ABOVE, PRICE_BELOW, VOLUME_ABOVE, CHANGE_ABOVE, CHANGE_BELOW
+    """
+    condition = rule.get("condition", "")
+    threshold = float(rule.get("threshold", 0))
+
+    result = {
+        "PRICE_ABOVE":  price     >  threshold,
+        "PRICE_BELOW":  price     <  threshold,
+        "VOLUME_ABOVE": volume    >  threshold,
+        "CHANGE_ABOVE": change_pct > threshold,
+        "CHANGE_BELOW": change_pct < threshold,
+    }.get(condition, False)
+
+    if result:
+        _log("Evaluator", "RULE_TRIGGERED", "MATCH",
+             f"condition={condition} threshold={threshold} "
+             f"price={price} volume={volume} change={change_pct}")
+    return result
+
+
+# ── SNS Notification ──────────────────────────────────────────────────────────
+
+def send_sns_notification(rule: Dict, symbol: str, price: float) -> bool:
+    """Build and publish an SNS alert notification."""
+    topic_name = os.getenv("SNS_TOPIC_NAME", "stock-alerts-topic")
+    region     = _get_region()
+
+    # Resolve topic ARN from name
     try:
-        topic_name = os.getenv('SNS_TOPIC_NAME', 'stock-alerts-topic')
-
-        # Get topic ARN
-        response = sns_client.list_topics()
-        topic_arn = None
-        for topic in response.get('Topics', []):
-            if topic_name in topic['TopicArn']:
-                topic_arn = topic['TopicArn']
+        response    = _get_sns().list_topics()
+        topic_arn   = None
+        for t in response.get("Topics", []):
+            if t["TopicArn"].endswith(f":{topic_name}"):
+                topic_arn = t["TopicArn"]
                 break
 
         if not topic_arn:
-            logger.warning("SNS topic not found — notification not sent.")
-            return
-
-        subject = f"🔔 Stock Alert: {alert['symbol']} - {alert['condition']}"
-        message = (
-            f"Stock Alert Triggered\n"
-            f"{'=' * 40}\n\n"
-            f"Symbol: {alert['symbol']}\n"
-            f"Condition: {alert['condition']}\n"
-            f"Threshold: ${alert['threshold']:.2f}\n"
-            f"Current Price: ${alert['current_price']:.2f}\n"
-            f"Time: {alert['triggered_at']}\n\n"
-            f"Message: {alert.get('message', '')}\n\n"
-            f"— Cloud Stock Market Analysis Platform"
-        )
-
-        sns_client.publish(
-            TopicArn=topic_arn,
-            Subject=subject[:100],
-            Message=message,
-        )
-        logger.info(f"Alert notification sent for {alert['symbol']}")
-
-        # Log to CloudWatch
-        log_alert_trigger(alert)
-
+            _log("SNS", "TOPIC_LOOKUP", "ERROR", f"topic_name={topic_name} not found")
+            logger.error(f"SNS topic '{topic_name}' not found.")
+            return False
     except ClientError as e:
-        logger.error(f"Error sending SNS notification: {e}")
+        _log("SNS", "TOPIC_LOOKUP", "ERROR", str(e))
+        logger.error(f"SNS list_topics error: {e}")
+        return False
 
+    condition = rule.get("condition", "")
+    threshold = float(rule.get("threshold", 0))
+    username  = rule.get("username", "user")
 
-def log_alert_trigger(alert: Dict[str, Any]):
-    """Log alert trigger event to CloudWatch."""
+    condition_map = {
+        "PRICE_ABOVE":  f"risen ABOVE ${threshold:.2f}",
+        "PRICE_BELOW":  f"fallen BELOW ${threshold:.2f}",
+        "VOLUME_ABOVE": f"volume exceeded {int(threshold):,}",
+        "CHANGE_ABOVE": f"gained more than {threshold:.2f}%",
+        "CHANGE_BELOW": f"dropped more than {abs(threshold):.2f}%",
+    }
+    condition_text = condition_map.get(condition, f"{condition} {threshold}")
+
+    subject = f"[ALERT TRIGGERED] {symbol} has {condition_text}"
+    message = (
+        f"Hi {username},\n\n"
+        f"Your stock alert has TRIGGERED!\n"
+        f"{'=' * 50}\n\n"
+        f"  Stock     : {symbol}\n"
+        f"  Condition : {condition.replace('_', ' ')}\n"
+        f"  Threshold : {threshold}\n"
+        f"  Current   : ${price:.2f}\n"
+        f"  Triggered : {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n\n"
+        f"{'=' * 50}\n"
+        f"Processed by AWS Lambda (alert_handler) via SQS event-driven pipeline.\n"
+        f"-- Cloud Stock Market Analysis Platform"
+    )
+
     try:
-        message = (
-            f"[ALERT_TRIGGER] Symbol: {alert['symbol']} | "
-            f"Condition: {alert['condition']} | "
-            f"Threshold: {alert['threshold']} | "
-            f"Price: {alert['current_price']}"
-        )
-        logger.info(message)
-    except Exception as e:
-        logger.error(f"Error logging alert: {e}")
+        _get_sns().publish(TopicArn=topic_arn, Subject=subject, Message=message)
+        _log("SNS", "NOTIFICATION_PUBLISHED", "OK",
+             f"topic={topic_name} symbol={symbol} condition={condition}")
+        logger.info(f"SNS: alert notification published for {symbol} {condition}")
+        return True
+    except ClientError as e:
+        _log("SNS", "NOTIFICATION_PUBLISHED", "ERROR", str(e))
+        logger.error(f"SNS publish error: {e}")
+        return False

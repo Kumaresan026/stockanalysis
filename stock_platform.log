@@ -1481,3 +1481,157 @@ DEBUG 2026-04-13 21:12:36,423 aws_session AWS identity verified: arn:aws:sts::66
 INFO 2026-04-13 21:12:36,584 sns_service SNS service initialized successfully.
 DEBUG 2026-04-13 21:12:39,835 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
 INFO 2026-04-13 21:12:40,005 lambda_service Lambda service initialized.
+DEBUG 2026-04-13 21:56:53,363 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:56:53,669 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-13 21:56:54,976 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:56:55,283 s3_service S3 service initialized successfully.
+DEBUG 2026-04-13 21:56:56,537 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:56:56,750 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-13 21:56:58,099 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:56:58,309 sns_service SNS service initialized successfully.
+DEBUG 2026-04-13 21:56:59,626 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:56:59,876 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 21:57:01,238 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:01,384 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-13 21:57:02,750 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:02,947 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 21:57:04,389 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:04,587 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-13 21:57:06,202 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:06,388 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 21:57:07,767 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:08,156 lambda_service Lambda service initialized.
+DEBUG 2026-04-13 21:57:09,495 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+DEBUG 2026-04-13 21:57:12,203 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:12,312 sqs_service SQS service initialized successfully.
+INFO 2026-04-13 21:57:13,723 sqs_service SQS message sent: STOCK_UPDATE (ID: 1fdf57ad-53a3-44b0-b745-b9f0920fd291)
+INFO 2026-04-13 21:57:21,745 stock_processor [Lambda] [INVOKED] [START] records=1
+INFO 2026-04-13 21:57:21,745 stock_processor stock_processor Lambda received 1 SQS record(s).
+INFO 2026-04-13 21:57:21,745 stock_processor [SQS] [MESSAGE_RECEIVED] [OK] event_type=STOCK_UPDATE symbol=AAPL
+INFO 2026-04-13 21:57:21,745 stock_processor Processing STOCK_UPDATE for AAPL
+INFO 2026-04-13 21:57:21,790 credentials Found credentials in environment variables.
+INFO 2026-04-13 21:57:21,882 stock_processor [DynamoDB] [CLIENT_INIT] [OK] region=us-east-1
+INFO 2026-04-13 21:57:22,836 stock_processor [DynamoDB] [RECORD_INSERTED] [OK] table=stock_data symbol=AAPL price=182.5
+INFO 2026-04-13 21:57:22,985 stock_processor [DynamoDB] [HISTORY_FETCHED] [OK] symbol=AAPL count=4
+INFO 2026-04-13 21:57:22,990 stock_processor [Analytics] [RUN_ANALYTICS] [OK] symbol=AAPL keys=['summary']
+INFO 2026-04-13 21:57:23,118 stock_processor [DynamoDB] [ANALYTICS_STORED] [OK] table=analytics_results symbol=AAPL
+INFO 2026-04-13 21:57:23,170 stock_processor [S3] [CLIENT_INIT] [OK] region=us-east-1
+INFO 2026-04-13 21:57:24,539 stock_processor [S3] [UPLOAD] [OK] s3://stock-platform-reports-2024/analytics/AAPL/20260413_205723.json
+INFO 2026-04-13 21:57:24,539 stock_processor S3: uploaded analytics report -> s3://stock-platform-reports-2024/analytics/AAPL/20260413_205723.json
+INFO 2026-04-13 21:57:24,559 stock_processor [Lambda] [CLIENT_INIT] [OK] region=us-east-1
+INFO 2026-04-13 21:57:25,764 stock_processor [Lambda] [CHAIN_INVOKE] [OK] function=alert_handler symbol=AAPL
+INFO 2026-04-13 21:57:25,764 stock_processor Lambda chain: invoked alert_handler for AAPL
+INFO 2026-04-13 21:57:25,764 stock_processor Stock update pipeline complete: AAPL @ $182.50
+INFO 2026-04-13 21:57:25,764 stock_processor [Lambda] [INVOKED] [DONE] processed=1 errors=0 duration_ms=4018
+DEBUG 2026-04-13 21:57:26,973 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:27,196 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-13 21:57:29,838 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:30,052 s3_service S3 service initialized successfully.
+DEBUG 2026-04-13 21:57:33,035 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 21:57:33,203 sns_service SNS service initialized successfully.
+INFO 2026-04-13 21:57:34,785 sns_service SNS notification published: [TEST] Pipeline Test for AAPL (run_id=a8608282)
+DEBUG 2026-04-13 22:02:18,616 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:18,810 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-13 22:02:20,121 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:20,345 s3_service S3 service initialized successfully.
+DEBUG 2026-04-13 22:02:21,658 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:21,801 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-13 22:02:23,156 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:23,286 sns_service SNS service initialized successfully.
+DEBUG 2026-04-13 22:02:24,717 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:24,845 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 22:02:26,261 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:26,412 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-13 22:02:27,808 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:27,989 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 22:02:29,348 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:29,553 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-13 22:02:31,099 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:31,253 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 22:02:32,570 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:32,738 lambda_service Lambda service initialized.
+DEBUG 2026-04-13 22:02:35,499 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:35,701 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-13 22:02:38,493 dynamodb_service Item stored in 'alert_rules': ['alert_id', 'user_id', 'username', 'symbol', 'condition', 'threshold', 'status', 'created_at']
+INFO 2026-04-13 22:02:38,618 dynamodb_service Item deleted from 'alert_rules'.
+DEBUG 2026-04-13 22:02:39,964 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:40,122 s3_service S3 service initialized successfully.
+INFO 2026-04-13 22:02:41,629 s3_service Uploaded to S3: s3://stock-platform-reports-2024/diagnostics/check.txt
+INFO 2026-04-13 22:02:41,772 s3_service Deleted S3 object: diagnostics/check.txt
+DEBUG 2026-04-13 22:02:43,207 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:43,320 sqs_service SQS service initialized successfully.
+INFO 2026-04-13 22:02:44,721 sqs_service SQS message sent: DIAGNOSTIC (ID: 9a56d377-d0a0-4ceb-b042-dc1b595ff4b2)
+DEBUG 2026-04-13 22:02:46,091 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:46,235 sns_service SNS service initialized successfully.
+DEBUG 2026-04-13 22:02:48,946 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:49,139 lambda_service Lambda service initialized.
+WARNING 2026-04-14 08:31:19,749 sns_service AWS credentials not configured. SNS unavailable.
+WARNING 2026-04-14 08:31:19,757 sns_service SNS unavailable — notification not sent.
+DEBUG 2026-04-14 11:37:16,962 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:17,402 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-14 11:37:19,341 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:19,682 s3_service S3 service initialized successfully.
+DEBUG 2026-04-14 11:37:21,358 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:21,577 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-14 11:37:23,433 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:23,658 sns_service SNS service initialized successfully.
+DEBUG 2026-04-14 11:37:25,579 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:25,833 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-14 11:37:27,610 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:27,774 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-14 11:37:29,669 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:29,834 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-14 11:37:31,723 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:32,144 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-14 11:37:33,879 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:34,051 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-14 11:37:35,814 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:36,118 lambda_service Lambda service initialized.
+DEBUG 2026-04-14 11:37:58,552 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:37:58,895 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-14 11:38:00,769 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:01,018 s3_service S3 service initialized successfully.
+DEBUG 2026-04-14 11:38:02,845 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:03,022 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-14 11:38:04,848 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:05,001 sns_service SNS service initialized successfully.
+DEBUG 2026-04-14 11:38:06,920 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:07,088 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-14 11:38:09,074 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:09,267 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-14 11:38:11,294 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:11,517 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-14 11:38:14,176 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:14,605 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-14 11:38:16,857 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:17,063 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-14 11:38:19,094 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-14 11:38:19,322 lambda_service Lambda service initialized.
+ERROR 2026-04-14 11:39:04,592 stock_api Alpha Vantage error for AAPL: HTTPSConnectionPool(host='www.alphavantage.co', port=443): Max retries exceeded with url: /query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=FOXECNGOACZ2LHZM (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)')))
+INFO 2026-04-14 11:39:14,851 stock_api Fetched AAPL from Finnhub.
+INFO 2026-04-14 11:39:29,396 stock_api Fetched GOOGL from Alpha Vantage.
+INFO 2026-04-14 11:39:29,956 stock_api Fetched MSFT from Finnhub.
+INFO 2026-04-14 11:39:30,544 stock_api Fetched AMZN from Alpha Vantage.
+INFO 2026-04-14 11:39:31,111 stock_api Fetched TSLA from Finnhub.
+INFO 2026-04-14 11:39:31,535 stock_api Fetched META from Finnhub.
+INFO 2026-04-14 11:39:31,806 stock_api Fetched NVDA from Alpha Vantage.
+INFO 2026-04-14 11:39:32,767 stock_api Fetched JPM from Finnhub.
+INFO 2026-04-14 11:39:32,943 stock_api Fetched V from Alpha Vantage.
+INFO 2026-04-14 11:39:33,269 stock_api Fetched WMT from Finnhub.
+INFO 2026-04-14 11:39:33,720 stock_api Fetched DIS from Finnhub.
+INFO 2026-04-14 11:39:34,096 stock_api Fetched NFLX from Finnhub.
+INFO 2026-04-14 11:39:49,637 cloudwatch_service Log group 'stock-platform-logs' already exists.
+INFO 2026-04-14 11:39:50,130 cloudwatch_service Logged 1 event(s) to 'system-events'.
+DEBUG 2026-04-14 11:40:00,859 alert_evaluator [AlertEval] No active alerts for MSFT
+DEBUG 2026-04-14 11:40:01,052 alert_evaluator [AlertEval] No active alerts for DIS
+DEBUG 2026-04-14 11:40:01,223 alert_evaluator [AlertEval] No active alerts for V
+DEBUG 2026-04-14 11:40:01,363 alert_evaluator [AlertEval] No active alerts for GOOGL
+DEBUG 2026-04-14 11:40:01,522 alert_evaluator [AlertEval] No active alerts for JPM
+DEBUG 2026-04-14 11:40:01,712 alert_evaluator [AlertEval] No active alerts for TSLA
+DEBUG 2026-04-14 11:40:01,902 alert_evaluator [AlertEval] No active alerts for WMT
+DEBUG 2026-04-14 11:40:02,074 alert_evaluator [AlertEval] No active alerts for AAPL
+DEBUG 2026-04-14 11:40:02,324 alert_evaluator [AlertEval] No active alerts for NFLX
+DEBUG 2026-04-14 11:40:02,540 alert_evaluator [AlertEval] No active alerts for NVDA
+DEBUG 2026-04-14 11:40:02,692 alert_evaluator [AlertEval] No active alerts for AMZN
+DEBUG 2026-04-14 11:40:02,992 alert_evaluator [AlertEval] No active alerts for META
+DEBUG 2026-04-14 11:40:32,458 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
