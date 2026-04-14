@@ -2,83 +2,7 @@
 
 {% block title %}Dashboard{% endblock %}
 
-{% block extra_css %}
-<style>
-/* ── Cloud Architecture Section ─────────────────────────────────── */
-.arch-card {
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 60%, #0f1923 100%);
-    border: 1px solid rgba(33, 110, 192, 0.3) !important;
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-}
-.arch-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(ellipse at 50% 0%, rgba(56,139,253,0.06) 0%, transparent 70%);
-    pointer-events: none;
-}
-.service-node {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 8px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    transition: all 0.3s ease;
-    cursor: default;
-    min-width: 70px;
-}
-.service-node:hover {
-    border-color: var(--node-color, #888);
-    background: rgba(255,255,255,0.04);
-    transform: translateY(-3px);
-}
-.service-node .icon-ring {
-    width: 52px; height: 52px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem;
-    border: 2px solid var(--node-color, #888);
-    animation: pulse-ring 2.5s ease-in-out infinite;
-}
-@keyframes pulse-ring {
-    0%, 100% { box-shadow: 0 0 8px var(--node-glow, rgba(136,136,136,0.3)); }
-    50%       { box-shadow: 0 0 20px var(--node-glow, rgba(136,136,136,0.5)); }
-}
-.service-node .svc-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.5px; }
-.service-node .svc-desc  { font-size: 0.63rem; color: #6c757d; text-align: center; max-width: 72px; line-height: 1.3; }
-.arch-connector {
-    display: flex; align-items: center; padding: 0 2px; color: #3d4455;
-    font-size: 1.1rem; flex-shrink: 0;
-    animation: flow-pulse 1.8s ease-in-out infinite;
-}
-@keyframes flow-pulse {
-    0%, 100% { color: #3d4455; }
-    50%       { color: #388bfd; }
-}
-.flow-badge {
-    font-size: 0.65rem; padding: 2px 8px;
-    border-radius: 20px; font-weight: 600;
-}
-.arch-title-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 0.7rem; padding: 3px 10px; border-radius: 20px;
-    border: 1px solid rgba(56,139,253,0.4);
-    background: rgba(56,139,253,0.08); color: #79c0ff;
-    margin-left: 8px; font-weight: 500;
-}
-.live-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #3fb950;
-    animation: blink 1.4s ease-in-out infinite;
-    display: inline-block;
-}
-@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-</style>
-{% endblock %}
+
 
 {% block content %}
 <!-- Hero Section -->
@@ -125,27 +49,6 @@
 </div>
 {% endif %}
 
-<!-- Beginner Intro Banner -->
-<div class="card border-0 mb-4" style="background:linear-gradient(135deg,rgba(13,202,240,0.08) 0%,rgba(13,202,240,0.03) 100%);border-left:3px solid #0dcaf0 !important;">
-    <div class="card-body py-3 px-4">
-        <div class="d-flex align-items-start gap-3 flex-wrap">
-            <div class="fs-3 text-info" style="line-height:1;">&#128161;</div>
-            <div>
-                <p class="mb-1 text-info fw-semibold">New to stocks?</p>
-                <p class="mb-1 small text-light">
-                    The <span class="badge bg-info bg-opacity-25 text-info">price</span> is what one share costs right now.
-                    A <span class="badge bg-primary bg-opacity-25 text-primary">share</span> is a tiny piece of ownership in a company.
-                    The <span class="badge bg-warning bg-opacity-25 text-warning">% change</span> shows if the price went up or down today compared to yesterday.
-                </p>
-                <p class="mb-0 small text-muted">
-                    <strong>Top Gainers</strong> = stocks whose price went UP the most today.
-                    <strong>Top Losers</strong> = stocks that fell the most.
-                    Click any stock to see its price chart and analysis.
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Top Gainers & Losers -->
 <div class="row">
@@ -155,7 +58,6 @@
             <div class="card-header bg-transparent border-secondary d-flex align-items-center">
                 <i class="bi bi-arrow-up-circle-fill text-success me-2 fs-5"></i>
                 <h5 class="mb-0">Top Gainers</h5>
-                <span class="ms-2 badge bg-success bg-opacity-25 text-success small">Price went UP today</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -200,7 +102,6 @@
             <div class="card-header bg-transparent border-secondary d-flex align-items-center">
                 <i class="bi bi-arrow-down-circle-fill text-danger me-2 fs-5"></i>
                 <h5 class="mb-0">Top Losers</h5>
-                <span class="ms-2 badge bg-danger bg-opacity-25 text-danger small">Price went DOWN today</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -278,125 +179,5 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     CLOUD ARCHITECTURE — Animated event-driven pipeline diagram
-     ═══════════════════════════════════════════════════════════════════ -->
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="arch-card card mb-3">
-      <!-- Header -->
-      <div class="card-header bg-transparent border-0 d-flex align-items-center pt-3 pb-0 px-4">
-        <i class="bi bi-cloud-fill text-primary me-2 fs-5"></i>
-        <h5 class="mb-0 text-white fw-semibold">Cloud Architecture</h5>
-        <span class="arch-title-badge">
-          <span class="live-dot"></span>
-          Event-Driven Pipeline Active
-        </span>
-      </div>
-
-      <div class="card-body px-4 pt-3 pb-3">
-        <!-- PRIMARY FLOW label -->
-        <div class="mb-3">
-          <span class="flow-badge" style="background:rgba(56,139,253,0.15);color:#79c0ff;border:1px solid rgba(56,139,253,0.3);">
-            PRIMARY &#9679; Django &rarr; SQS &rarr; Lambda Pipeline
-          </span>
-        </div>
-
-        <!-- Service Nodes Row -->
-        <div class="d-flex align-items-center flex-wrap gap-0 mb-3">
-
-          <!-- Django / EB -->
-          <div class="service-node" style="--node-color:#e8673c;--node-glow:rgba(232,103,60,0.4);" title="Django web app on Elastic Beanstalk. Sends STOCK_UPDATE events to SQS on every stock page view.">
-            <div class="icon-ring" style="--node-color:#e8673c;--node-glow:rgba(232,103,60,0.4);">
-              <i class="bi bi-globe" style="color:#e8673c;"></i>
-            </div>
-            <span class="svc-label" style="color:#e8673c;">Django / EB</span>
-            <span class="svc-desc">Web App</span>
-          </div>
-          <div class="arch-connector">&rarr;</div>
-
-          <!-- SQS -->
-          <div class="service-node" style="--node-color:#0dcaf0;--node-glow:rgba(13,202,240,0.4);" title="SQS: stock-events-queue decouples Django from Lambda. Messages persist until processed.">
-            <div class="icon-ring" style="--node-color:#0dcaf0;--node-glow:rgba(13,202,240,0.4);">
-              <i class="bi bi-stack" style="color:#0dcaf0;"></i>
-            </div>
-            <span class="svc-label" style="color:#0dcaf0;">SQS</span>
-            <span class="svc-desc">Message Queue</span>
-          </div>
-          <div class="arch-connector">&rarr;</div>
-
-          <!-- Lambda -->
-          <div class="service-node" style="--node-color:#f0b429;--node-glow:rgba(240,180,41,0.4);" title="stock_processor Lambda: runs analytics, writes to DynamoDB, uploads to S3, chains alert_handler.">
-            <div class="icon-ring" style="--node-color:#f0b429;--node-glow:rgba(240,180,41,0.4);">
-              <i class="bi bi-lightning-charge-fill" style="color:#f0b429;"></i>
-            </div>
-            <span class="svc-label" style="color:#f0b429;">Lambda</span>
-            <span class="svc-desc">Serverless FaaS</span>
-          </div>
-          <div class="arch-connector">&rarr;</div>
-
-          <!-- DynamoDB -->
-          <div class="service-node" style="--node-color:#ffc107;--node-glow:rgba(255,193,7,0.4);" title="DynamoDB: 4 tables — stock_data, alert_rules, user_watchlists, analytics_results.">
-            <div class="icon-ring" style="--node-color:#ffc107;--node-glow:rgba(255,193,7,0.4);">
-              <i class="bi bi-database-fill" style="color:#ffc107;"></i>
-            </div>
-            <span class="svc-label" style="color:#ffc107;">DynamoDB</span>
-            <span class="svc-desc">NoSQL Store</span>
-          </div>
-          <div class="arch-connector" style="font-size:0.8rem;">+</div>
-
-          <!-- S3 -->
-          <div class="service-node" style="--node-color:#3fb950;--node-glow:rgba(63,185,80,0.4);" title="S3: stock-platform-reports-2024 — stores analytics JSON reports per symbol.">
-            <div class="icon-ring" style="--node-color:#3fb950;--node-glow:rgba(63,185,80,0.4);">
-              <i class="bi bi-cloud-arrow-up-fill" style="color:#3fb950;"></i>
-            </div>
-            <span class="svc-label" style="color:#3fb950;">S3</span>
-            <span class="svc-desc">Object Store</span>
-          </div>
-          <div class="arch-connector">&rarr;</div>
-
-          <!-- SNS -->
-          <div class="service-node" style="--node-color:#ff6b6b;--node-glow:rgba(255,107,107,0.4);" title="SNS: stock-alerts-topic — publishes alert notifications to confirmed email subscribers.">
-            <div class="icon-ring" style="--node-color:#ff6b6b;--node-glow:rgba(255,107,107,0.4);">
-              <i class="bi bi-bell-fill" style="color:#ff6b6b;"></i>
-            </div>
-            <span class="svc-label" style="color:#ff6b6b;">SNS</span>
-            <span class="svc-desc">Notifications</span>
-          </div>
-          <div class="arch-connector">&rarr;</div>
-
-          <!-- Email -->
-          <div class="service-node" style="--node-color:#8957e5;--node-glow:rgba(137,87,229,0.4);" title="Confirmed email subscribers receive price alert notifications.">
-            <div class="icon-ring" style="--node-color:#8957e5;--node-glow:rgba(137,87,229,0.4);">
-              <i class="bi bi-envelope-check-fill" style="color:#8957e5;"></i>
-            </div>
-            <span class="svc-label" style="color:#8957e5;">Email</span>
-            <span class="svc-desc">Alert Delivery</span>
-          </div>
-          <div class="arch-connector" style="font-size:0.75rem;color:#444;">|</div>
-
-          <!-- CloudWatch -->
-          <div class="service-node" style="--node-color:#adb5bd;--node-glow:rgba(173,181,189,0.3);" title="CloudWatch: structured [SERVICE][ACTION][STATUS] logs from all Lambda functions.">
-            <div class="icon-ring" style="--node-color:#adb5bd;--node-glow:rgba(173,181,189,0.3);">
-              <i class="bi bi-activity text-secondary"></i>
-            </div>
-            <span class="svc-label" style="color:#adb5bd;">CloudWatch</span>
-            <span class="svc-desc">Monitoring</span>
-          </div>
-        </div>
-
-        <!-- FALLBACK FLOW -->
-        <div class="d-flex align-items-center gap-2 flex-wrap pt-2" style="border-top:1px solid rgba(255,255,255,0.06);">
-          <span class="flow-badge" style="background:rgba(255,255,255,0.04);color:#6c757d;border:1px solid rgba(255,255,255,0.1);">
-            FALLBACK &#9679; AWS Academy (IAM-restricted)
-          </span>
-          <span class="small text-muted">
-            Django &rarr; SQS &rarr; <code class="text-info">poll_sqs</code> worker &rarr; DynamoDB &rarr; SNS &rarr; Email
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 {% endblock %}
+

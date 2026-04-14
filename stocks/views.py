@@ -454,6 +454,22 @@ def create_alert(request):
                 }
             )
 
+            # ── Idempotency: prevent duplicate alerts ─────────────────────
+            existing = Alert.objects.filter(
+                user=request.user,
+                stock=stock_obj,
+                condition=condition,
+                threshold=threshold,
+                status='active',
+            ).first()
+            if existing:
+                messages.info(
+                    request,
+                    f'You already have an active alert for {symbol} {condition} '
+                    f'${float(threshold):.2f}. Duplicate not created.'
+                )
+                return redirect('alerts')
+
             # Always create Django model record (needed for page rendering)
             alert = Alert.objects.create(
                 user=request.user,
@@ -503,20 +519,23 @@ def create_alert(request):
             )
 
             # ── Send alert creation confirmation email ────────────────
-            # Re-subscribe on every alert creation to ensure the email
-            # is always subscribed even if the initial subscribe failed.
-            current_price = float(stock_data.get('price', 0))
-            user_email    = request.user.email
-            ok = False  # default: SNS notification not sent yet
+            # Re-subscribe on every alert creation to handle the case where
+            # SNS was unavailable or the email was not confirmed yet.
+            current_price  = float(stock_data.get('price', 0))
+            ok             = False                            # SNS notification not sent yet
+            user_email     = request.user.email
+            fallback_email = os.getenv('SNS_ALERT_EMAIL', '')
+            notify_email   = user_email or fallback_email    # used in success message
 
             if sns_service.available:
-                # If user has an email on their account, subscribe it to SNS.
-                # AWS SNS subscribe is idempotent — safe to call every time.
-                if user_email:
+                # Subscribe user email (idempotent — safe on every creation).
+                # Falls back to SNS_ALERT_EMAIL if user has no email on their account.
+                subscribe_target = user_email or fallback_email
+                if subscribe_target:
                     try:
-                        sns_service.subscribe(user_email)
+                        sns_service.subscribe(subscribe_target)
                     except Exception:
-                        pass  # best-effort — publish still goes to confirmed subscribers
+                        pass  # best-effort; global subscribers still receive the message
 
                 # Human-readable condition explanation
                 condition_map = {
@@ -534,7 +553,7 @@ def create_alert(request):
                 )
                 confirmation_message = (
                     f"Hi {request.user.username},\n\n"
-                    f"Your stock alert has been set successfully!\n"
+                    f"Your stock alert has been set successfully.\n"
                     f"{'=' * 50}\n\n"
                     f"  Stock     : {symbol} ({stock_data.get('name', symbol)})\n"
                     f"  Condition : {condition.replace('_', ' ')}\n"
@@ -543,8 +562,7 @@ def create_alert(request):
                     f"  You will receive an email when {symbol} {condition_text}.\n\n"
                     f"{'=' * 50}\n"
                     f"Manage your alerts: https://{request.get_host()}/alerts/\n\n"
-                    f"-- Cloud Stock Market Analysis Platform\n"
-                    f"   Powered by AWS SNS"
+                    f"-- Cloud Stock Market Analysis Platform"
                 )
 
                 ok = sns_service.publish(
@@ -552,12 +570,20 @@ def create_alert(request):
                     message=confirmation_message,
                 )
                 if ok:
-                    logger.info(f"Alert confirmation email sent to {user_email} for {symbol} {condition}")
+                    logger.info(
+                        f"Alert confirmation published via SNS — "
+                        f"symbol={symbol} condition={condition} email={notify_email}"
+                    )
                 else:
-                    logger.warning(f"Alert confirmation email FAILED for {user_email}. "
-                                   "Check: SNS topic exists, email subscription confirmed.")
-            elif not user_email:
-                logger.warning(f"User {request.user.username} has no email — cannot send alert confirmation.")
+                    logger.warning(
+                        f"SNS publish failed for {symbol} {condition}. "
+                        f"Check: topic ARN valid, email subscription confirmed."
+                    )
+            else:
+                logger.warning(
+                    f"SNS unavailable — alert saved but no confirmation email sent. "
+                    f"User={request.user.username} symbol={symbol}"
+                )
 
             # Log to CloudWatch
             cloudwatch_service.log_system_event(
@@ -567,9 +593,17 @@ def create_alert(request):
             )
 
             if sns_service.available and ok:
-                messages.success(request, f'Alert created for {symbol}. Check your email for confirmation!')
+                email_shown = notify_email or 'your registered email'
+                messages.success(
+                    request,
+                    f'✅ Alert created for {symbol}. Confirmation email sent to {email_shown}.'
+                )
             else:
-                messages.warning(request, f'Alert saved locally for {symbol}, but AWS email notifications are currently unavailable (credentials may have expired).')
+                messages.warning(
+                    request,
+                    f'Alert saved for {symbol}. '
+                    f'Email notification unavailable — refresh AWS credentials and try again.'
+                )
             return redirect('alerts')
     else:
         form = AlertForm()

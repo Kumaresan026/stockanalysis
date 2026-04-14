@@ -3,6 +3,12 @@ SNS Service — boto3 integration for Amazon SNS.
 
 Sends notifications when stock alerts are triggered.
 Supports topic creation, email subscriptions, and message publishing.
+
+Production hardening:
+- If SNS_TOPIC_ARN env var is set, the ARN lookup (list_topics API call)
+  is skipped entirely — faster and more resilient.
+- publish() catches specific boto3 error codes and logs actionable messages.
+- subscribe() is idempotent (safe to call multiple times for the same email).
 """
 
 import os
@@ -20,20 +26,27 @@ class SNSService:
     """
     Service class for Amazon SNS operations via boto3.
     Supports AWS Academy temporary credentials via AWS_SESSION_TOKEN.
+
+    Performance: set SNS_TOPIC_ARN in environment to bypass list_topics()
+    and reduce initialisation to a single client creation.
     """
 
     def __init__(self):
         """Initialize boto3 SNS client with env credentials."""
         self.topic_name = os.getenv('SNS_TOPIC_NAME', 'stock-alerts-topic')
-        self.topic_arn = None
-        self.available = check_aws_available()
+        self.topic_arn  = os.getenv('SNS_TOPIC_ARN') or None  # fast-path: skip list_topics
+        self.available  = check_aws_available()
+
         if not self.available:
             logger.warning("AWS credentials not configured. SNS unavailable.")
             return
         try:
             session = get_boto3_session()
             self.client = session.client('sns')
-            logger.info("SNS service initialized successfully.")
+            if self.topic_arn:
+                logger.info(f"SNS service initialised (ARN from env): {self.topic_arn}")
+            else:
+                logger.info("SNS service initialised successfully.")
         except (NoCredentialsError, Exception) as e:
             self.available = False
             logger.warning(f"SNS init failed: {e}")
@@ -42,7 +55,7 @@ class SNSService:
 
     def create_topic(self) -> Optional[str]:
         """
-        Create an SNS topic programmatically.
+        Create an SNS topic (idempotent — safe to call if topic already exists).
 
         Returns:
             Topic ARN or None on failure.
@@ -58,14 +71,21 @@ class SNSService:
                 },
             )
             self.topic_arn = response['TopicArn']
-            logger.info(f"SNS topic created: {self.topic_arn}")
+            logger.info(f"SNS topic created/confirmed: {self.topic_arn}")
             return self.topic_arn
         except ClientError as e:
-            logger.error(f"Error creating SNS topic: {e}")
+            log_aws_error(e, "sns.create_topic")
             return None
 
     def get_topic_arn(self) -> Optional[str]:
-        """Get the ARN of the configured topic."""
+        """
+        Return the SNS topic ARN.
+
+        Priority:
+        1. Already resolved (self.topic_arn set from env or previous call)
+        2. list_topics() search
+        3. create_topic() as last resort
+        """
         if self.topic_arn:
             return self.topic_arn
 
@@ -73,31 +93,36 @@ class SNSService:
             return None
 
         try:
-            response = self.client.list_topics()
-            for topic in response.get('Topics', []):
-                if self.topic_name in topic['TopicArn']:
-                    self.topic_arn = topic['TopicArn']
-                    return self.topic_arn
-            # Topic not found, create it
+            paginator = self.client.get_paginator('list_topics')
+            for page in paginator.paginate():
+                for topic in page.get('Topics', []):
+                    if self.topic_name in topic['TopicArn']:
+                        self.topic_arn = topic['TopicArn']
+                        logger.info(f"SNS topic found: {self.topic_arn}")
+                        return self.topic_arn
+            # Not found — create it
+            logger.info(f"SNS topic '{self.topic_name}' not found — creating it.")
             return self.create_topic()
         except ClientError as e:
-            logger.error(f"Error listing SNS topics: {e}")
+            log_aws_error(e, "sns.list_topics")
             return None
 
     # ── Subscription Management ───────────────────────────────────────
 
     def subscribe(self, email: str) -> Optional[str]:
         """
-        Subscribe an email address to the alert topic.
+        Subscribe an email address to the alert topic (idempotent).
+
+        AWS SNS subscribe is safe to call multiple times for the same
+        email — it returns the existing subscription ARN if already confirmed.
 
         Args:
             email: Email address to subscribe.
 
         Returns:
-            Subscription ARN or None. Note: email subscriptions
-            return 'pending confirmation' until the user confirms.
+            Subscription ARN or 'pending confirmation', or None on failure.
         """
-        if not self.available:
+        if not self.available or not email:
             return None
 
         topic_arn = self.get_topic_arn()
@@ -112,10 +137,10 @@ class SNSService:
                 ReturnSubscriptionArn=True,
             )
             sub_arn = response['SubscriptionArn']
-            logger.info(f"SNS subscription created for {email}: {sub_arn}")
+            logger.info(f"SNS subscription for {email}: {sub_arn}")
             return sub_arn
         except ClientError as e:
-            logger.error(f"Error subscribing {email} to SNS: {e}")
+            log_aws_error(e, f"sns.subscribe email={email}")
             return None
 
     def list_subscriptions(self) -> List[Dict[str, str]]:
@@ -128,19 +153,17 @@ class SNSService:
             return []
 
         try:
-            response = self.client.list_subscriptions_by_topic(
-                TopicArn=topic_arn,
-            )
+            response = self.client.list_subscriptions_by_topic(TopicArn=topic_arn)
             return [
                 {
                     'endpoint': sub['Endpoint'],
                     'protocol': sub['Protocol'],
-                    'status': sub['SubscriptionArn'],
+                    'status':   sub['SubscriptionArn'],
                 }
                 for sub in response.get('Subscriptions', [])
             ]
         except ClientError as e:
-            logger.error(f"Error listing SNS subscriptions: {e}")
+            log_aws_error(e, "sns.list_subscriptions_by_topic")
             return []
 
     # ── Publishing ────────────────────────────────────────────────────
@@ -150,7 +173,7 @@ class SNSService:
         Publish a notification message to the SNS topic.
 
         Args:
-            subject: Email subject line.
+            subject: Email subject line (truncated to 100 chars — SNS limit).
             message: Notification message body.
 
         Returns:
@@ -162,42 +185,71 @@ class SNSService:
 
         topic_arn = self.get_topic_arn()
         if not topic_arn:
+            logger.error(
+                "SNS topic ARN not found. "
+                "Set SNS_TOPIC_ARN in environment or run: python manage.py init_aws_resources"
+            )
             return False
 
         try:
-            self.client.publish(
+            response = self.client.publish(
                 TopicArn=topic_arn,
-                Subject=subject[:100],  # SNS subject limit
+                Subject=subject[:100],   # SNS subject limit
                 Message=message,
             )
-            logger.info(f"SNS notification published: {subject}")
+            msg_id = response.get('MessageId', '?')
+            logger.info(f"SNS published OK — MessageId={msg_id} subject='{subject[:60]}'")
             return True
         except ClientError as e:
-            log_aws_error(e, f"sns.publish topic={self.topic_name}")
+            code = e.response.get('Error', {}).get('Code', 'Unknown')
+            msg  = e.response.get('Error', {}).get('Message', str(e))
+
+            if code in ('ExpiredTokenException', 'ExpiredToken'):
+                logger.error(
+                    "[SNS] PUBLISH FAILED — AWS_SESSION_TOKEN EXPIRED. "
+                    "Refresh: AWS Academy → AWS Details → AWS CLI → copy credentials → "
+                    "update in EB Console → Configuration → Software → Environment Properties."
+                )
+            elif code in ('AuthorizationError', 'AccessDeniedException'):
+                logger.error(
+                    f"[SNS] PUBLISH FAILED — ACCESS DENIED (code={code}). "
+                    f"Message: {msg}. "
+                    "Ensure LabRole has sns:Publish permission on the topic ARN."
+                )
+            elif code == 'InvalidParameter':
+                logger.error(f"[SNS] PUBLISH FAILED — Invalid parameter: {msg}")
+            elif code == 'KMSDisabledException':
+                logger.error("[SNS] PUBLISH FAILED — KMS key is disabled.")
+            else:
+                logger.error(f"[SNS] PUBLISH FAILED — code={code}: {msg}")
             return False
 
     def publish_alert(self, symbol: str, condition: str,
                       threshold: float, current_price: float) -> bool:
         """
-        Publish a stock alert notification.
+        Publish a stock alert triggered notification.
 
         Args:
-            symbol: Stock symbol.
-            condition: Alert condition type.
-            threshold: Alert threshold value.
+            symbol:        Stock symbol.
+            condition:     Alert condition type (e.g. 'PRICE_ABOVE').
+            threshold:     Alert threshold value.
             current_price: Current stock price.
 
         Returns:
             True on success.
         """
-        subject = f"Stock Alert: {symbol} - {condition}"
+        direction = "📈" if 'ABOVE' in condition else "📉"
+        subject = (
+            f"{direction} Stock Alert: {symbol} — "
+            f"{condition.replace('_', ' ').title()} ${threshold:.2f}"
+        )
         message = (
             f"🔔 Stock Alert Triggered\n"
             f"{'=' * 40}\n\n"
-            f"Symbol: {symbol}\n"
-            f"Condition: {condition}\n"
-            f"Threshold: ${threshold:.2f}\n"
-            f"Current Price: ${current_price:.2f}\n\n"
+            f"Symbol    : {symbol}\n"
+            f"Condition : {condition}\n"
+            f"Threshold : ${threshold:.2f}\n"
+            f"Current   : ${current_price:.2f}\n\n"
             f"This alert was generated by the Cloud Stock Market Analysis Platform.\n"
             f"Log in to your dashboard to manage your alerts."
         )

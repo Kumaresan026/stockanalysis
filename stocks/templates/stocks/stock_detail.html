@@ -7,7 +7,6 @@
 .term-badge { cursor: help; border-bottom: 1px dashed #6c757d; }
 .metric-card { transition: transform 0.2s; }
 .metric-card:hover { transform: translateY(-2px); }
-.beginner-tip { background: rgba(13,202,240,0.08); border-left: 3px solid #0dcaf0; }
 .signal-up { color: #198754; }
 .signal-down { color: #dc3545; }
 .sector-badge { font-size: 0.75rem; }
@@ -90,19 +89,6 @@
         </div>
     </div>
 </div>
-
-<!-- ── What do these numbers mean? (Beginner Guide) ───────────────── -->
-<div class="card bg-dark border-info beginner-tip mb-4">
-    <div class="card-body py-2 px-3">
-        <p class="mb-0 small text-info">
-            <i class="bi bi-lightbulb me-1"></i>
-            <strong>New to stocks?</strong>
-            The <strong>price</strong> is what one share costs right now.
-            A <strong>share</strong> is a tiny piece of ownership in the company.
-            The <strong>% change</strong> shows if the price went up or down today compared to yesterday.
-            <a href="#glossary" class="text-info">See full glossary ↓</a>
-        </p>
-    </div>
 </div>
 
 <!-- ── Key Metrics ──────────────────────────────────────────────── -->
@@ -115,7 +101,7 @@
                     Opening Price <i class="bi bi-question-circle"></i>
                 </span>
                 <div class="fs-4 fw-bold text-white mt-1">${{ stock.open|floatformat:2 }}</div>
-                <small class="text-muted">What it cost this morning</small>
+                
             </div>
         </div>
     </div>
@@ -126,7 +112,7 @@
                     Yesterday's Close <i class="bi bi-question-circle"></i>
                 </span>
                 <div class="fs-4 fw-bold text-white mt-1">${{ stock.previous_close|floatformat:2 }}</div>
-                <small class="text-muted">Starting point for today</small>
+                
             </div>
         </div>
     </div>
@@ -137,7 +123,7 @@
                     Day High <i class="bi bi-question-circle"></i>
                 </span>
                 <div class="fs-4 fw-bold text-success mt-1">${{ stock.high|floatformat:2 }}</div>
-                <small class="text-muted">Best price of the day</small>
+                
             </div>
         </div>
     </div>
@@ -148,7 +134,7 @@
                     Day Low <i class="bi bi-question-circle"></i>
                 </span>
                 <div class="fs-4 fw-bold text-danger mt-1">${{ stock.low|floatformat:2 }}</div>
-                <small class="text-muted">Cheapest price of the day</small>
+                
             </div>
         </div>
     </div>
@@ -165,7 +151,7 @@
                 </span>
             </div>
             <div class="fs-4 fw-bold text-white">{{ stock.volume|floatformat:0 }} shares</div>
-            <small class="text-muted">Number of shares traded hands today</small>
+            
         </div>
     </div>
 </div>
@@ -182,11 +168,6 @@
         </span>
     </div>
     <div class="card-body">
-        <p class="text-muted small mb-3">
-            <i class="bi bi-info-circle me-1 text-info"></i>
-            This chart shows how the stock price moved over the past 3 months.
-            <strong>Going up = good for shareholders. Going down = price dropped.</strong>
-        </p>
         <canvas id="priceChart" height="100"></canvas>
     </div>
 </div>
@@ -358,113 +339,8 @@
 </div>
 {% endif %}
 
-
-<!-- ── Stock Market Glossary ──────────────────────────────────── -->
-<div class="card border-0 mb-4" id="glossary"
-     style="background:linear-gradient(135deg,#0d1117 0%,#161b22 100%);
-            border:1px solid rgba(56,139,253,0.25) !important;">
-    <div class="card-header border-0 pb-0 pt-3 px-4"
-         style="background:linear-gradient(90deg,rgba(56,139,253,0.12) 0%,transparent 100%);">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width:38px;height:38px;border-radius:8px;
-                        background:rgba(56,139,253,0.15);display:flex;
-                        align-items:center;justify-content:center;">
-                <i class="bi bi-book-half text-primary fs-5"></i>
-            </div>
-            <div>
-                <h5 class="mb-0 text-white fw-semibold">Stock Market Glossary</h5>
-                <small class="text-muted">Beginner's Guide — hover over any bold term above for a tooltip</small>
-            </div>
-            <span class="badge ms-auto" style="background:rgba(56,139,253,0.15);color:#79c0ff;border:1px solid rgba(56,139,253,0.3);font-size:0.65rem;">
-                12 Terms Explained
-            </span>
-        </div>
-    </div>
-    <div class="card-body px-4 pt-3 pb-4">
-        <div class="row g-3">
-            <!-- Column 1 -->
-            <div class="col-md-6">
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(13,202,240,0.15);color:#0dcaf0;border:1px solid rgba(13,202,240,0.3);">Stock / Share</span>
-                    </div>
-                    <p class="text-muted small mb-0">A tiny piece of ownership in a company. If Apple has 1 billion shares and you own 1, you own 1 billionth of Apple.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(13,202,240,0.15);color:#0dcaf0;border:1px solid rgba(13,202,240,0.3);">Stock Price</span>
-                    </div>
-                    <p class="text-muted small mb-0">The current cost to buy one share. Determined by what buyers are willing to pay and sellers are willing to accept.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(255,193,7,0.15);color:#ffc107;border:1px solid rgba(255,193,7,0.3);">% Change</span>
-                    </div>
-                    <p class="text-muted small mb-0">How much the price moved today vs. yesterday's close. +2% means it rose 2%. -3% means it fell 3%.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(56,139,253,0.15);color:#79c0ff;border:1px solid rgba(56,139,253,0.3);">Volume</span>
-                    </div>
-                    <p class="text-muted small mb-0">Total shares traded in a day. High volume = lots of interest. Low volume = quiet day.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);">Opening Price</span>
-                    </div>
-                    <p class="text-muted small mb-0">First trade price when the market opens at 9:30 AM ET (New York time).</p>
-                </div>
-                <div class="glossary-term mb-0">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);">Previous Close</span>
-                    </div>
-                    <p class="text-muted small mb-0">Last trade price when the market closed the previous day at 4:00 PM ET. Used to calculate today's % change.</p>
-                </div>
-            </div>
-            <!-- Column 2 -->
-            <div class="col-md-6">
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(240,180,41,0.15);color:#f0b429;border:1px solid rgba(240,180,41,0.3);">Moving Average (SMA)</span>
-                    </div>
-                    <p class="text-muted small mb-0">Average price over the last N days. Smooths out noise. Price above SMA-20 = uptrend signal.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(240,180,41,0.15);color:#f0b429;border:1px solid rgba(240,180,41,0.3);">RSI (Strength Index)</span>
-                    </div>
-                    <p class="text-muted small mb-0">Score 0-100. Above 70 = overbought (may drop). Below 30 = oversold (may rise). 40-60 = neutral range.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(255,107,107,0.15);color:#ff6b6b;border:1px solid rgba(255,107,107,0.3);">Volatility</span>
-                    </div>
-                    <p class="text-muted small mb-0">How "jumpy" a stock is. High = large price swings (risky). Low = steady, predictable movements.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);">Bullish</span>
-                    </div>
-                    <p class="text-muted small mb-0">Expecting the price to go UP. A "bull market" is when prices are generally rising across the board.</p>
-                </div>
-                <div class="glossary-term mb-3">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(255,107,107,0.15);color:#ff6b6b;border:1px solid rgba(255,107,107,0.3);">Bearish</span>
-                    </div>
-                    <p class="text-muted small mb-0">Expecting the price to go DOWN. A "bear market" = prices down 20%+ from a recent peak.</p>
-                </div>
-                <div class="glossary-term mb-0">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge" style="background:rgba(56,139,253,0.15);color:#79c0ff;border:1px solid rgba(56,139,253,0.3);">Watchlist</span>
-                    </div>
-                    <p class="text-muted small mb-0">Your personal list of stocks to monitor. You don't own them — you just track their price movements for research.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
+
 
 {% block extra_js %}
 <script>
