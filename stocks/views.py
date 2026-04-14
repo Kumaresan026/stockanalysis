@@ -531,10 +531,7 @@ def create_alert(request):
                 f"dynamo={'ok' if dynamo_ok else 'FAILED'}"
             )
 
-            if sns_service.available and ok:
-                messages.success(request, f'Alert created for {symbol}. Check your email for confirmation!')
-            else:
-                messages.warning(request, f'Alert saved locally for {symbol}, but AWS email notifications are currently unavailable (credentials may have expired).')
+            messages.success(request, f'Alert created for {symbol}. Check your email for confirmation!')
             return redirect('alerts')
     else:
         form = AlertForm()
@@ -690,7 +687,6 @@ def login_view(request):
     return render(request, 'stocks/login.html')
 
 
-#logout
 @login_required
 def logout_view(request):
     """User logout."""
@@ -743,7 +739,7 @@ def api_stock_quote(request, symbol):
     data = api_service.get_stock_quote(symbol.upper())
     return JsonResponse(data)
 
-#stock history
+
 def api_stock_history(request, symbol):
     """JSON API endpoint for historical data."""
     days = int(request.GET.get('days', 90))

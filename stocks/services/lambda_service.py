@@ -258,43 +258,28 @@ class LambdaService:
 
         Returns:
             True on success or if already exists.
-            False if any error occurs (caller should fall back to Django poller).
         """
         if not self.available:
             return False
 
         queue_arn = self.get_queue_arn(queue_name)
         if not queue_arn:
-            logger.error(f"[SQS] [TRIGGER_CHECK] [ERROR] queue={queue_name} not found.")
+            logger.error(f"SQS queue '{queue_name}' not found.")
             return False
 
-        # Idempotency: check if trigger already exists before creating
+        # Check if trigger already exists
         try:
             mappings = self.client.list_event_source_mappings(
                 EventSourceArn=queue_arn,
                 FunctionName=function_name,
             )
-            existing = mappings.get('EventSourceMappings', [])
-            if existing:
-                state = existing[0].get('State', 'Unknown')
-                logger.info(
-                    f"[SQS] [TRIGGER_CHECK] [EXISTS] "
-                    f"queue={queue_name} function={function_name} state={state}"
-                )
+            if mappings.get('EventSourceMappings'):
+                logger.info(f"SQS trigger already exists for {function_name}.")
                 return True
-        except ClientError as e:
-            code = e.response.get('Error', {}).get('Code', '')
-            if code in ('AccessDenied', 'AccessDeniedException'):
-                logger.warning(
-                    "[Lambda] [TRIGGER_CHECK] [ACCESS_DENIED] "
-                    "Falling back to poller due to IAM restriction. "
-                    "The Django poll_sqs worker process will handle SQS messages instead. "
-                    "This is expected in AWS Learner Academy environments."
-                )
-                return False
-            logger.warning(f"[SQS] [TRIGGER_CHECK] [WARN] {e}")
+        except ClientError:
+            pass
 
-        # Create the event source mapping
+        # Create the trigger
         try:
             self.client.create_event_source_mapping(
                 EventSourceArn=queue_arn,
@@ -302,25 +287,10 @@ class LambdaService:
                 BatchSize=5,
                 FunctionResponseTypes=['ReportBatchItemFailures'],
             )
-            logger.info(
-                f"[SQS] [TRIGGER_CREATED] [OK] "
-                f"queue={queue_name} function={function_name}"
-            )
+            logger.info(f"SQS trigger created: {queue_name} -> {function_name}")
             return True
         except ClientError as e:
-            code = e.response.get('Error', {}).get('Code', '')
-            if code in ('AccessDenied', 'AccessDeniedException'):
-                logger.warning(
-                    "[Lambda] [TRIGGER_CREATE] [ACCESS_DENIED] "
-                    "Falling back to poller due to IAM restriction. "
-                    "The Django poll_sqs management command will process SQS messages. "
-                    "Start fallback with: python manage.py poll_sqs"
-                )
-            else:
-                logger.error(
-                    f"[SQS] [TRIGGER_CREATE] [ERROR] "
-                    f"queue={queue_name} function={function_name} error={e}"
-                )
+            logger.error(f"Error creating SQS trigger: {e}")
             return False
 
     # ── Direct Invocation ─────────────────────────────────────────────
