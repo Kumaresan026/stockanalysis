@@ -7,11 +7,34 @@ duplication and ensure session token is always included.
 """
 
 import os
+import time
 import logging
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
 
 logger = logging.getLogger('stocks')
+
+# ── Credential availability cache ──────────────────────────────────────
+# Caches the result of check_aws_available() for AWS_CACHE_TTL seconds.
+# This prevents every service init (SNS, DynamoDB, S3, SQS, etc.) from
+# making its own STS call on every request, which caused 10-15s delays.
+# When credentials are rotated, the cache is auto-invalidated by
+# comparing the current session token against the cached one.
+AWS_CACHE_TTL = 300  # 5 minutes
+
+_aws_cache = {
+    'result':     None,   # True | False | None (unset)
+    'checked_at': 0.0,    # epoch timestamp of last check
+    'token_key':  None,   # first 20 chars of AWS_SESSION_TOKEN to detect rotation
+}
+
+
+def _invalidate_aws_cache() -> None:
+    """Force the next check_aws_available() call to re-verify credentials."""
+    _aws_cache['result'] = None
+    _aws_cache['checked_at'] = 0.0
+    _aws_cache['token_key'] = None
+
 
 
 def get_boto3_session() -> boto3.Session:
@@ -83,21 +106,39 @@ def check_aws_available() -> bool:
     """
     Validate AWS credentials by making a real STS:GetCallerIdentity call.
 
-    Unlike a simple env-var check, this catches expired AWS Academy tokens
-    (AWS_SESSION_TOKEN) which appear non-empty but are actually invalid.
+    Result is cached for AWS_CACHE_TTL seconds (default 5 min) so that
+    every service init in the same request doesn't pay a separate ~2s
+    STS round-trip. Cache is auto-invalidated when AWS_SESSION_TOKEN
+    changes (credential rotation detected).
 
     Returns:
         True if credentials are valid and not expired, False otherwise.
     """
-    if not (os.getenv('AWS_ACCESS_KEY_ID') and os.getenv('AWS_SECRET_ACCESS_KEY')):
+    access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+    if not (access_key and secret_key):
         logger.warning("AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not set.")
         return False
 
+    # Token-rotation detection: if the credential was swapped, invalidate cache
+    current_token_key = (os.getenv('AWS_SESSION_TOKEN') or '')[:20]
+    if current_token_key != _aws_cache['token_key']:
+        _invalidate_aws_cache()
+        logger.debug("AWS credential rotation detected — cache invalidated.")
+
+    # Serve from cache if still fresh
+    now = time.monotonic()
+    if _aws_cache['result'] is not None and (now - _aws_cache['checked_at']) < AWS_CACHE_TTL:
+        return _aws_cache['result']
+
+    # Cache miss — actually verify with STS
+    result = False
     try:
         session = get_boto3_session()
         identity = session.client('sts').get_caller_identity()
         logger.debug(f"AWS identity verified: {identity.get('Arn', 'unknown')}")
-        return True
+        result = True
     except ClientError as e:
         code = e.response.get('Error', {}).get('Code', '')
         if code in ('ExpiredTokenException', 'ExpiredToken'):
@@ -111,13 +152,18 @@ def check_aws_available() -> bool:
         elif code == 'AccessDenied':
             # Credentials exist but STS GetCallerIdentity is restricted — treat as available
             logger.warning("AWS credentials valid but STS GetCallerIdentity denied — assuming available.")
-            return True
+            result = True
         else:
             logger.warning(f"AWS credential check failed ({code}): {e}")
-        return False
     except (NoCredentialsError, PartialCredentialsError) as e:
         logger.warning(f"AWS credentials missing: {e}")
-        return False
+
+    # Store in cache
+    _aws_cache['result']     = result
+    _aws_cache['checked_at'] = now
+    _aws_cache['token_key']  = current_token_key
+    logger.debug(f"AWS credential cache updated: available={result}, ttl={AWS_CACHE_TTL}s")
+    return result
 
 
 def log_aws_error(e: Exception, context: str = "") -> None:
