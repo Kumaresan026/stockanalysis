@@ -42,16 +42,29 @@ from stocks.services.lambda_service import LambdaService
 
 logger = logging.getLogger('stocks')
 
-# Initialize services
+# Non-AWS services: safe to initialize once at startup (no credentials needed)
 api_service = StockAPIService()
-dynamodb_service = DynamoDBService()
-s3_service = S3Service()
-sqs_service = SQSService()
-sns_service = SNSService()
-cloudwatch_service = CloudWatchService()
-event_producer = StockEventProducer()
 indicator_service = StockIndicatorService()
-lambda_service = LambdaService()
+
+# AWS services: created fresh per-request so rotated credentials are always
+# picked up without needing a server restart.
+def _sns():           return SNSService()
+def _dynamodb():      return DynamoDBService()
+def _s3():            return S3Service()
+def _sqs():           return SQSService()
+def _cloudwatch():    return CloudWatchService()
+def _event_producer(): return StockEventProducer()
+def _lambda():        return LambdaService()
+
+# Keep module-level names for backward compatibility (views use these directly)
+# They are re-created on every request by calling the factory inside each view.
+sns_service        = _sns()
+dynamodb_service   = _dynamodb()
+s3_service         = _s3()
+sqs_service        = _sqs()
+cloudwatch_service = _cloudwatch()
+event_producer     = _event_producer()
+lambda_service     = _lambda()
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -60,6 +73,10 @@ lambda_service = LambdaService()
 
 def dashboard(request):
     """Main dashboard — market overview with top gainers/losers."""
+    # Fresh instances on every request — picks up rotated AWS Academy credentials
+    dynamodb_service   = _dynamodb()
+    sns_service        = _sns()
+    cloudwatch_service = _cloudwatch()
     from stocks.services.aws_session import check_aws_available
 
     # Fetch top movers
@@ -134,6 +151,14 @@ def stock_detail(request, symbol):
     4. Compute analytics
     """
     symbol = symbol.upper()
+    # Fresh instances on every request — picks up rotated AWS Academy credentials
+    dynamodb_service   = _dynamodb()
+    sns_service        = _sns()
+    sqs_service        = _sqs()
+    cloudwatch_service = _cloudwatch()
+    event_producer     = _event_producer()
+    lambda_service     = _lambda()
+    s3_service         = _s3()
 
     # Step 1: Fetch real-time data
     stock_data = api_service.get_stock_quote(symbol)
@@ -339,6 +364,8 @@ def alerts_view(request):
     renders correctly even when DynamoDB has records the current instance lacks.
     """
     user_id = str(request.user.id)
+    # Fresh instances on every request
+    dynamodb_service = _dynamodb()
 
     # Try DynamoDB first — filtered by both user_id and username (fallback)
     dynamo_alerts = []
@@ -403,6 +430,13 @@ def create_alert(request):
     - Primary: DynamoDB (persists across EB deployments and scaling events)
     - Fallback: SQLite (used only when DynamoDB is unavailable, i.e. local dev)
     """
+    # Fresh AWS service instances — credentials checked on every alert creation
+    dynamodb_service   = _dynamodb()
+    sns_service        = _sns()
+    cloudwatch_service = _cloudwatch()
+    event_producer     = _event_producer()
+    lambda_service     = _lambda()
+
     if request.method == 'POST':
         form = AlertForm(request.POST)
         if form.is_valid():
@@ -473,6 +507,7 @@ def create_alert(request):
             # is always subscribed even if the initial subscribe failed.
             current_price = float(stock_data.get('price', 0))
             user_email    = request.user.email
+            ok = False  # default: SNS notification not sent yet
 
             if sns_service.available:
                 # If user has an email on their account, subscribe it to SNS.
@@ -572,6 +607,9 @@ def delete_alert(request, alert_id):
 def analytics_view(request):
     """Analytics dashboard — technical indicators and visualizations."""
     symbol = request.GET.get('symbol', 'AAPL').upper()
+    # Fresh instances on every request
+    s3_service     = _s3()
+    event_producer = _event_producer()
 
     # Fetch data
     stock_data = api_service.get_stock_quote(symbol)
@@ -629,6 +667,8 @@ def register_view(request):
     """User registration."""
     if request.user.is_authenticated:
         return redirect('dashboard')
+    sns_service        = _sns()
+    cloudwatch_service = _cloudwatch()
 
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
@@ -657,6 +697,8 @@ def login_view(request):
     """User login."""
     if request.user.is_authenticated:
         return redirect('dashboard')
+    sns_service        = _sns()
+    cloudwatch_service = _cloudwatch()
 
     if request.method == 'POST':
         username = request.POST.get('username', '')
@@ -694,6 +736,7 @@ def login_view(request):
 @login_required
 def logout_view(request):
     """User logout."""
+    cloudwatch_service = _cloudwatch()
     cloudwatch_service.log_system_event(
         'USER_LOGOUT', f"User: {request.user.username}"
     )
