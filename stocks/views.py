@@ -742,7 +742,7 @@ def api_stock_quote(request, symbol):
     data = api_service.get_stock_quote(symbol.upper())
     return JsonResponse(data)
 
-
+#stock history
 def api_stock_history(request, symbol):
     """JSON API endpoint for historical data."""
     days = int(request.GET.get('days', 90))
