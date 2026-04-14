@@ -1,9 +1,23 @@
 """
-AWS Session Helper — creates a boto3 session with support for
-AWS Academy temporary credentials (AWS_SESSION_TOKEN).
+AWS Session Helper — credential-chain-aware boto3 session factory.
 
-All service files import from this module to avoid credential
-duplication and ensure session token is always included.
+Supports two credential modes automatically:
+
+  1. EXPLICIT (env vars set) — local dev / AWS Academy:
+     Reads AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY (+ optional
+     AWS_SESSION_TOKEN) from environment and passes them explicitly to
+     boto3. Required for AWS Academy whose temporary credentials expire
+     every 4-6 hours.
+
+  2. IAM ROLE fallback (env vars absent / placeholder) — Elastic Beanstalk:
+     When the env vars are not set (or are set to the default placeholder
+     "REPLACE_IN_EB_CONSOLE"), boto3.Session() is constructed without
+     explicit credentials. boto3 then walks the standard credential chain:
+       env vars → ~/.aws/credentials → EC2 instance profile (LabRole)
+     This is the correct approach when the EB instance has LabRole attached.
+
+All service files import from this module only — no direct boto3 calls
+outside this file so credential logic stays in one place.
 """
 
 import os
@@ -14,204 +28,235 @@ from botocore.exceptions import NoCredentialsError, PartialCredentialsError, Cli
 
 logger = logging.getLogger('stocks')
 
-# ── Credential availability cache ──────────────────────────────────────
-# Caches the result of check_aws_available() for AWS_CACHE_TTL seconds.
-# This prevents every service init (SNS, DynamoDB, S3, SQS, etc.) from
-# making its own STS call on every request, which caused 10-15s delays.
-# When credentials are rotated, the cache is auto-invalidated by
-# comparing the current session token against the cached one.
+# ── Placeholder sentinel ───────────────────────────────────────────────────
+# When .ebextensions/03_environment.config has not been overridden in the
+# EB Console, these values indicate "use IAM role instead".
+_PLACEHOLDERS = {'', 'REPLACE_IN_EB_CONSOLE', 'replace_in_eb_console'}
+
+
+def _using_explicit_credentials() -> bool:
+    """Return True if real explicit credentials are set in the environment."""
+    key = os.getenv('AWS_ACCESS_KEY_ID', '').strip()
+    secret = os.getenv('AWS_SECRET_ACCESS_KEY', '').strip()
+    return key not in _PLACEHOLDERS and secret not in _PLACEHOLDERS
+
+
+# ── Credential availability cache ──────────────────────────────────────────
+# Caches the STS:GetCallerIdentity result for AWS_CACHE_TTL seconds so that
+# 6 services initialised in the same request do not each pay a ~2s STS
+# round-trip. Cache is auto-invalidated when AWS_SESSION_TOKEN changes (env)
+# or when switching between IAM-role and explicit-credential mode.
 AWS_CACHE_TTL = 300  # 5 minutes
 
 _aws_cache = {
     'result':     None,   # True | False | None (unset)
-    'checked_at': 0.0,    # epoch timestamp of last check
-    'token_key':  None,   # first 20 chars of AWS_SESSION_TOKEN to detect rotation
+    'checked_at': 0.0,    # monotonic timestamp of last successful check
+    'cache_key':  None,   # tracks credential identity to detect rotation
 }
 
 
+def _make_cache_key() -> str:
+    """Return a short string that uniquely identifies the current credentials."""
+    if _using_explicit_credentials():
+        # Use first 20 chars of session token (or key id) to detect rotation
+        token = os.getenv('AWS_SESSION_TOKEN', '')
+        return f"explicit:{token[:20]}"
+    return "iam_role"
+
+
 def _invalidate_aws_cache() -> None:
-    """Force the next check_aws_available() call to re-verify credentials."""
+    """Force the next check_aws_available() call to re-verify with AWS STS."""
     _aws_cache['result'] = None
     _aws_cache['checked_at'] = 0.0
-    _aws_cache['token_key'] = None
+    _aws_cache['cache_key'] = None
 
 
+# ── Session factory ────────────────────────────────────────────────────────
 
 def get_boto3_session() -> boto3.Session:
     """
-    Create a boto3 Session using environment credentials.
+    Return a boto3.Session appropriate for the current environment.
 
-    Supports:
-    - Standard credentials (access key + secret)
-    - AWS Academy / STS temporary credentials (includes session token)
+    Mode A — Explicit credentials (local dev / AWS Academy):
+      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set to real values.
+      Passes them explicitly so the session token is always included.
 
-    Returns:
-        boto3.Session configured from environment variables.
+    Mode B — IAM role (Elastic Beanstalk with LabRole attached):
+      Env vars are absent or still contain the placeholder string.
+      Returns boto3.Session() without credentials; boto3 automatically
+      discovers the EC2 instance profile via the metadata service.
+
+    Region always comes from AWS_DEFAULT_REGION (default: us-east-1).
     """
-    session_token = os.getenv('AWS_SESSION_TOKEN') or None  # None if empty string
+    region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
 
-    return boto3.Session(
-        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-        aws_session_token=session_token,
-        region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'),
-    )
+    if _using_explicit_credentials():
+        session_token = os.getenv('AWS_SESSION_TOKEN') or None  # '' → None
+        return boto3.Session(
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+            aws_session_token=session_token,
+            region_name=region,
+        )
 
-
-def get_client(service_name: str):
-    """Get a boto3 client for a given AWS service."""
-    try:
-        session = get_boto3_session()
-        # Validate credentials via STS before returning service client
-        session.client('sts').get_caller_identity()
-        return session.client(service_name), True
-    except (NoCredentialsError, PartialCredentialsError) as e:
-        logger.warning(f"AWS credentials not configured — {service_name} unavailable: {e}")
-        return None, False
-    except ClientError as e:
-        code = e.response.get('Error', {}).get('Code', '')
-        if code in ('ExpiredTokenException', 'ExpiredToken'):
-            logger.error(
-                "AWS_SESSION_TOKEN EXPIRED. Update credentials in "
-                "EB Console → Configuration → Software → Environment Properties."
-            )
-        else:
-            logger.warning(f"AWS credential validation failed for {service_name}: {e}")
-        return None, False
+    # No explicit credentials — let the boto3 credential chain find the role
+    logger.debug("No explicit AWS credentials — using IAM role / instance profile.")
+    return boto3.Session(region_name=region)
 
 
-def get_resource(service_name: str):
-    """Get a boto3 resource for a given AWS service."""
-    try:
-        session = get_boto3_session()
-        # Validate credentials via STS before returning resource
-        session.client('sts').get_caller_identity()
-        return session.resource(service_name), True
-    except (NoCredentialsError, PartialCredentialsError) as e:
-        logger.warning(f"AWS credentials not configured — {service_name} resource unavailable: {e}")
-        return None, False
-    except ClientError as e:
-        code = e.response.get('Error', {}).get('Code', '')
-        if code in ('ExpiredTokenException', 'ExpiredToken'):
-            logger.error(
-                "AWS_SESSION_TOKEN EXPIRED. Update credentials in "
-                "EB Console → Configuration → Software → Environment Properties."
-            )
-        else:
-            logger.warning(f"AWS credential validation failed for {service_name} resource: {e}")
-        return None, False
-
+# ── Credential availability check (cached) ────────────────────────────────
 
 def check_aws_available() -> bool:
     """
-    Validate AWS credentials by making a real STS:GetCallerIdentity call.
+    Validate that AWS credentials are usable by calling STS:GetCallerIdentity.
 
-    Result is cached for AWS_CACHE_TTL seconds (default 5 min) so that
-    every service init in the same request doesn't pay a separate ~2s
-    STS round-trip. Cache is auto-invalidated when AWS_SESSION_TOKEN
-    changes (credential rotation detected).
+    Works in both explicit-credential mode (env vars) and IAM-role mode
+    (EC2 instance profile). The result is cached for AWS_CACHE_TTL seconds.
+    Cache is auto-invalidated when the credential identity changes (token
+    rotation in AWS Academy, or switch from IAM-role to explicit mode).
 
     Returns:
-        True if credentials are valid and not expired, False otherwise.
+        True  — credentials are valid and STS call succeeded.
+        False — no usable credentials found (SNS / DynamoDB will be skipped).
     """
-    access_key = os.getenv('AWS_ACCESS_KEY_ID')
-    secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+    cache_key = _make_cache_key()
 
-    if not (access_key and secret_key):
-        logger.warning("AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not set.")
-        return False
-
-    # Token-rotation detection: if the credential was swapped, invalidate cache
-    current_token_key = (os.getenv('AWS_SESSION_TOKEN') or '')[:20]
-    if current_token_key != _aws_cache['token_key']:
+    # Invalidate if credential identity has changed
+    if cache_key != _aws_cache['cache_key']:
         _invalidate_aws_cache()
-        logger.debug("AWS credential rotation detected — cache invalidated.")
+        logger.debug(f"AWS credential identity changed ({cache_key}) — cache invalidated.")
 
     # Serve from cache if still fresh
     now = time.monotonic()
     if _aws_cache['result'] is not None and (now - _aws_cache['checked_at']) < AWS_CACHE_TTL:
         return _aws_cache['result']
 
-    # Cache miss — actually verify with STS
+    # Cache miss — verify with a real STS call
     result = False
     try:
         session = get_boto3_session()
         identity = session.client('sts').get_caller_identity()
         logger.debug(f"AWS identity verified: {identity.get('Arn', 'unknown')}")
         result = True
+
     except ClientError as e:
         code = e.response.get('Error', {}).get('Code', '')
         if code in ('ExpiredTokenException', 'ExpiredToken'):
             logger.error(
                 "AWS_SESSION_TOKEN EXPIRED. "
                 "Go to AWS Academy → AWS Details → AWS CLI, copy fresh credentials, "
-                "and update them in EB Console → Configuration → Software → Environment Properties."
+                "and paste them into EB Console → Configuration → Software → "
+                "Environment Properties (AWS_ACCESS_KEY_ID / SECRET / SESSION_TOKEN)."
             )
         elif code in ('InvalidClientTokenId', 'AuthFailure', 'InvalidAccessKeyId'):
-            logger.error(f"AWS credentials are INVALID (code={code}). Check AWS_ACCESS_KEY_ID.")
+            logger.error(
+                f"AWS credentials INVALID (code={code}). "
+                "Check AWS_ACCESS_KEY_ID is correct in the environment."
+            )
         elif code == 'AccessDenied':
-            # Credentials exist but STS GetCallerIdentity is restricted — treat as available
-            logger.warning("AWS credentials valid but STS GetCallerIdentity denied — assuming available.")
+            # STS GetCallerIdentity is denied but credentials do exist — treat as ok.
+            logger.warning(
+                "STS:GetCallerIdentity was denied (AccessDenied) — "
+                "credentials exist but lack sts:GetCallerIdentity. Assuming available."
+            )
             result = True
         else:
-            logger.warning(f"AWS credential check failed ({code}): {e}")
-    except (NoCredentialsError, PartialCredentialsError) as e:
-        logger.warning(f"AWS credentials missing: {e}")
+            logger.warning(f"STS credential check failed ({code}): {e}")
 
-    # Store in cache
-    _aws_cache['result']     = result
+    except NoCredentialsError:
+        if _using_explicit_credentials():
+            logger.warning("AWS credentials set in env but boto3 could not load them.")
+        else:
+            logger.warning(
+                "No AWS credentials found. "
+                "On EB: ensure LabRole is attached as the EC2 instance profile. "
+                "Locally: set AWS_ACCESS_KEY_ID / SECRET in .env."
+            )
+
+    except PartialCredentialsError as e:
+        logger.warning(f"Incomplete AWS credentials: {e}")
+
+    # Update cache
+    _aws_cache['result'] = result
     _aws_cache['checked_at'] = now
-    _aws_cache['token_key']  = current_token_key
-    logger.debug(f"AWS credential cache updated: available={result}, ttl={AWS_CACHE_TTL}s")
+    _aws_cache['cache_key'] = cache_key
+    logger.debug(f"AWS credential cache updated: available={result}, ttl={AWS_CACHE_TTL}s, mode={'explicit' if _using_explicit_credentials() else 'iam_role'}")
     return result
 
 
-def log_aws_error(e: Exception, context: str = "") -> None:
+# ── Helpers used by service classes ───────────────────────────────────────
+
+def get_client(service_name: str):
     """
-    Log a boto3 ClientError with an actionable message.
+    Return (boto3_client, True) or (None, False).
 
-    Detects the most common EB failure modes:
-    - ExpiredTokenException  → AWS Academy token expired
-    - AccessDeniedException  → IAM role missing required permission
-    - ResourceNotFoundException → Table / queue / bucket doesn't exist yet
+    Does NOT make an extra STS call — caller is responsible for ensuring
+    check_aws_available() has already passed.
+    """
+    try:
+        return get_boto3_session().client(service_name), True
+    except (NoCredentialsError, PartialCredentialsError) as e:
+        logger.warning(f"No credentials for {service_name}: {e}")
+        return None, False
+    except Exception as e:
+        logger.warning(f"Failed to create {service_name} client: {e}")
+        return None, False
 
-    Call this from every service-layer except block so engineers can diagnose
-    failures without SSH-ing into the instance.
+
+def get_resource(service_name: str):
+    """
+    Return (boto3_resource, True) or (None, False).
+
+    Does NOT make an extra STS call — caller is responsible for ensuring
+    check_aws_available() has already passed.
+    """
+    try:
+        return get_boto3_session().resource(service_name), True
+    except (NoCredentialsError, PartialCredentialsError) as e:
+        logger.warning(f"No credentials for {service_name} resource: {e}")
+        return None, False
+    except Exception as e:
+        logger.warning(f"Failed to create {service_name} resource: {e}")
+        return None, False
+
+
+def log_aws_error(e: Exception, context: str = '') -> None:
+    """
+    Log a boto3 ClientError with an actionable human-readable message.
 
     Args:
-        e: The caught exception (expected ClientError, but handles any Exception).
-        context: Short description of what operation was attempted (e.g. 'put_item alert_rules').
+        e:       The caught exception.
+        context: Short description of the operation (e.g. 'sns.publish').
     """
-    prefix = f"[AWS ERROR] {context} — " if context else "[AWS ERROR] "
+    prefix = f'[AWS] {context} — ' if context else '[AWS] '
 
-    if hasattr(e, 'response'):
-        code = e.response.get('Error', {}).get('Code', 'Unknown')
-        msg = e.response.get('Error', {}).get('Message', str(e))
+    if not hasattr(e, 'response'):
+        logger.error(f'{prefix}{e}')
+        return
 
-        if code in ('ExpiredTokenException', 'ExpiredToken'):
-            logger.error(
-                f"{prefix}AWS_SESSION_TOKEN EXPIRED. "
-                "Refresh credentials: AWS Academy → AWS Details → AWS CLI, "
-                "then update in EB Console → Configuration → Software → Environment Properties."
-            )
-        elif code in ('AccessDeniedException', 'AuthorizationError'):
-            logger.error(
-                f"{prefix}ACCESS DENIED (code={code}). "
-                f"Message: {msg}. "
-                "Check the IAM role attached to the EB EC2 instance has the required permissions."
-            )
-        elif code == 'ResourceNotFoundException':
-            logger.error(
-                f"{prefix}RESOURCE NOT FOUND (code={code}): {msg}. "
-                "Run: python manage.py init_aws_resources"
-            )
-        elif code in ('InvalidClientTokenId', 'AuthFailure', 'InvalidAccessKeyId'):
-            logger.error(
-                f"{prefix}INVALID CREDENTIALS (code={code}). "
-                "Check AWS_ACCESS_KEY_ID is correct."
-            )
-        else:
-            logger.error(f"{prefix}ClientError code={code}: {msg}")
+    code = e.response.get('Error', {}).get('Code', 'Unknown')
+    msg  = e.response.get('Error', {}).get('Message', str(e))
+
+    if code in ('ExpiredTokenException', 'ExpiredToken'):
+        logger.error(
+            f'{prefix}SESSION TOKEN EXPIRED. '
+            'Refresh: AWS Academy → AWS Details → AWS CLI → copy all three values → '
+            'EB Console → Configuration → Software → Environment Properties.'
+        )
+    elif code in ('AccessDeniedException', 'AuthorizationError'):
+        logger.error(
+            f'{prefix}ACCESS DENIED ({code}): {msg}. '
+            'Ensure the EB instance profile (LabRole) has the required IAM permission.'
+        )
+    elif code == 'ResourceNotFoundException':
+        logger.error(
+            f'{prefix}RESOURCE NOT FOUND: {msg}. '
+            'Run: python manage.py init_aws_resources'
+        )
+    elif code in ('InvalidClientTokenId', 'AuthFailure', 'InvalidAccessKeyId'):
+        logger.error(
+            f'{prefix}INVALID CREDENTIALS ({code}). '
+            'Check AWS_ACCESS_KEY_ID is correct.'
+        )
     else:
-        logger.error(f"{prefix}{e}")
-
+        logger.error(f'{prefix}ClientError {code}: {msg}')
