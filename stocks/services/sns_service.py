@@ -10,36 +10,39 @@ logger = logging.getLogger('stocks')
 
 class SNSService:
     """
-    Production-ready SNS Service.
+    Clean SNS Service (EB + AWS Academy safe)
 
-    Fixes:
-    - No STS dependency (works with IAM role in EB)
-    - Forces region explicitly
-    - Requires SNS_TOPIC_ARN (no unreliable list_topics)
-    - Clear logging for debugging
+    Improvements:
+    - No list_topics() (removes API validation issues)
+    - Strong validation for ARN
+    - Better logging
+    - Works with IAM role OR env credentials
     """
 
     def __init__(self):
-        self.region = os.getenv("AWS_REGION", "us-east-1")
+        self.region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         self.topic_arn = os.getenv("SNS_TOPIC_ARN")
 
         self.available = False
         self.client = None
 
+        logger.error("🔥 SNS FIX DEPLOYED 🔥")  # deployment marker
+
+        # 🔴 Validate ARN
         if not self.topic_arn:
-            logger.error("SNS_TOPIC_ARN not set in environment.")
+            logger.error("SNS_TOPIC_ARN missing — SNS disabled.")
+            return
+
+        if not self.topic_arn.startswith("arn:aws:sns"):
+            logger.error(f"Invalid SNS_TOPIC_ARN format: {self.topic_arn}")
             return
 
         try:
-            # Use IAM role or env credentials automatically
-            session = boto3.Session()
-            self.client = session.client("sns", region_name=self.region)
+            self.client = boto3.client("sns", region_name=self.region)
 
-            # Lightweight check → SNS access works
-            self.client.list_topics(MaxResults=1)
-
+            # Minimal validation → no API calls needed
             self.available = True
-            logger.info(f"SNS initialised successfully (region={self.region})")
+            logger.info(f"✅ SNS ready (region={self.region})")
 
         except Exception as e:
             logger.error(f"SNS init failed: {str(e)}")
@@ -51,11 +54,11 @@ class SNSService:
 
     def publish(self, subject: str, message: str) -> bool:
         if not self.available:
-            logger.error("SNS unavailable — cannot publish.")
+            logger.error("SNS unavailable — publish skipped.")
             return False
 
         try:
-            logger.info(f"Publishing to SNS topic: {self.topic_arn}")
+            logger.info(f"Publishing to SNS → {self.topic_arn}")
 
             response = self.client.publish(
                 TopicArn=self.topic_arn,
@@ -63,7 +66,7 @@ class SNSService:
                 Message=message,
             )
 
-            logger.info(f"SNS SUCCESS — MessageId={response.get('MessageId')}")
+            logger.info(f"✅ SNS SUCCESS — MessageId={response.get('MessageId')}")
             return True
 
         except ClientError as e:
@@ -73,11 +76,13 @@ class SNSService:
             logger.error(f"[SNS ERROR] code={code} message={msg}")
 
             if code in ("AuthorizationError", "AccessDeniedException"):
-                logger.error("Fix: Ensure IAM role has sns:Publish permission.")
+                logger.error("👉 Fix IAM role: add sns:Publish permission")
+
             elif code in ("NotFound", "InvalidParameter"):
-                logger.error("Fix: Check SNS_TOPIC_ARN is correct.")
+                logger.error("👉 Check SNS_TOPIC_ARN is correct")
+
             elif code in ("ExpiredToken", "ExpiredTokenException"):
-                logger.error("Fix: Refresh AWS credentials (if using env keys).")
+                logger.error("👉 AWS credentials expired — restart lab")
 
             return False
 
