@@ -8,13 +8,14 @@
 <!-- Hero Section -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 text-white" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
+        <div class="card border-0 text-white"
+            style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
             <div class="card-body p-4">
                 <h1 class="display-6 fw-bold mb-2">
-                    <i class="bi bi-graph-up-arrow me-2"></i>Market Overview
+                    <i class="bi bi-graph-up-arrow me-2"></i>Stock Market Overview
                 </h1>
                 <p class="lead mb-0 opacity-75">
-                    Real-time stock analytics powered by AWS cloud services
+                    Real-time stock analytics
                 </p>
             </div>
         </div>
@@ -72,7 +73,8 @@
                         </thead>
                         <tbody>
                             {% for stock in gainers %}
-                            <tr class="cursor-pointer" onclick="window.location='{% url 'stock_detail' stock.symbol %}'">
+                            <tr class="cursor-pointer"
+                                onclick="window.location='{% url 'stock_detail' stock.symbol %}'">
                                 <td>
                                     <span class="fw-semibold text-white">{{ stock.symbol }}</span><br>
                                     <small class="text-muted">{{ stock.name }}</small>
@@ -87,7 +89,9 @@
                                 <td class="text-end align-middle text-muted">{{ stock.volume|floatformat:0 }}</td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center text-muted py-3">No data available</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">No data available</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -116,7 +120,8 @@
                         </thead>
                         <tbody>
                             {% for stock in losers %}
-                            <tr class="cursor-pointer" onclick="window.location='{% url 'stock_detail' stock.symbol %}'">
+                            <tr class="cursor-pointer"
+                                onclick="window.location='{% url 'stock_detail' stock.symbol %}'">
                                 <td>
                                     <span class="fw-semibold text-white">{{ stock.symbol }}</span><br>
                                     <small class="text-muted">{{ stock.name }}</small>
@@ -131,7 +136,9 @@
                                 <td class="text-end align-middle text-muted">{{ stock.volume|floatformat:0 }}</td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center text-muted py-3">No data available</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">No data available</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -180,4 +187,3 @@
 </div>
 
 {% endblock %}
-
