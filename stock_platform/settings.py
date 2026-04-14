@@ -18,6 +18,14 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-change-me-in-produc
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*.elasticbeanstalk.com,localhost,127.0.0.1').split(',')
 
+# CSRF trusted origins — required for Django 4.0+ behind Nginx/proxy (e.g. EB).
+# Without this, every form POST (login, alerts, etc.) returns 403 Forbidden.
+_csrf_raw = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://*.elasticbeanstalk.com,http://*.elasticbeanstalk.com'
+)
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_raw.split(',') if o.strip()]
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
