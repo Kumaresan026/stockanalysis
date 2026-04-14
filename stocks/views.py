@@ -690,6 +690,7 @@ def login_view(request):
     return render(request, 'stocks/login.html')
 
 
+#logout
 @login_required
 def logout_view(request):
     """User logout."""
