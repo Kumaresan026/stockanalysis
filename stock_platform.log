@@ -1530,3 +1530,40 @@ INFO 2026-04-13 21:57:30,052 s3_service S3 service initialized successfully.
 DEBUG 2026-04-13 21:57:33,035 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
 INFO 2026-04-13 21:57:33,203 sns_service SNS service initialized successfully.
 INFO 2026-04-13 21:57:34,785 sns_service SNS notification published: [TEST] Pipeline Test for AAPL (run_id=a8608282)
+DEBUG 2026-04-13 22:02:18,616 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:18,810 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-13 22:02:20,121 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:20,345 s3_service S3 service initialized successfully.
+DEBUG 2026-04-13 22:02:21,658 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:21,801 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-13 22:02:23,156 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:23,286 sns_service SNS service initialized successfully.
+DEBUG 2026-04-13 22:02:24,717 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:24,845 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 22:02:26,261 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:26,412 sqs_service SQS service initialized successfully.
+DEBUG 2026-04-13 22:02:27,808 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:27,989 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 22:02:29,348 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:29,553 dynamodb_service DynamoDB service initialized successfully.
+DEBUG 2026-04-13 22:02:31,099 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:31,253 cloudwatch_service CloudWatch service initialized successfully.
+DEBUG 2026-04-13 22:02:32,570 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:32,738 lambda_service Lambda service initialized.
+DEBUG 2026-04-13 22:02:35,499 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:35,701 dynamodb_service DynamoDB service initialized successfully.
+INFO 2026-04-13 22:02:38,493 dynamodb_service Item stored in 'alert_rules': ['alert_id', 'user_id', 'username', 'symbol', 'condition', 'threshold', 'status', 'created_at']
+INFO 2026-04-13 22:02:38,618 dynamodb_service Item deleted from 'alert_rules'.
+DEBUG 2026-04-13 22:02:39,964 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:40,122 s3_service S3 service initialized successfully.
+INFO 2026-04-13 22:02:41,629 s3_service Uploaded to S3: s3://stock-platform-reports-2024/diagnostics/check.txt
+INFO 2026-04-13 22:02:41,772 s3_service Deleted S3 object: diagnostics/check.txt
+DEBUG 2026-04-13 22:02:43,207 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:43,320 sqs_service SQS service initialized successfully.
+INFO 2026-04-13 22:02:44,721 sqs_service SQS message sent: DIAGNOSTIC (ID: 9a56d377-d0a0-4ceb-b042-dc1b595ff4b2)
+DEBUG 2026-04-13 22:02:46,091 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:46,235 sns_service SNS service initialized successfully.
+DEBUG 2026-04-13 22:02:48,946 aws_session AWS identity verified: arn:aws:sts::669473726067:assumed-role/voclabs/user4735662=x25178679@student.ncirl.ie
+INFO 2026-04-13 22:02:49,139 lambda_service Lambda service initialized.
+WARNING 2026-04-14 08:31:19,749 sns_service AWS credentials not configured. SNS unavailable.
+WARNING 2026-04-14 08:31:19,757 sns_service SNS unavailable — notification not sent.

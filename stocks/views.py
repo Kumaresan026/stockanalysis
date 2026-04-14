@@ -531,7 +531,10 @@ def create_alert(request):
                 f"dynamo={'ok' if dynamo_ok else 'FAILED'}"
             )
 
-            messages.success(request, f'Alert created for {symbol}. Check your email for confirmation!')
+            if sns_service.available and ok:
+                messages.success(request, f'Alert created for {symbol}. Check your email for confirmation!')
+            else:
+                messages.warning(request, f'Alert saved locally for {symbol}, but AWS email notifications are currently unavailable (credentials may have expired).')
             return redirect('alerts')
     else:
         form = AlertForm()
