@@ -26,9 +26,9 @@ class SNSService:
         self.available = False
         self.client = None
 
-        logger.error("🔥 SNS FIX DEPLOYED 🔥")  # deployment marker
 
-        # 🔴 Validate ARN
+
+        # Validate ARN
         if not self.topic_arn:
             logger.error("SNS_TOPIC_ARN missing — SNS disabled.")
             return
@@ -42,11 +42,45 @@ class SNSService:
 
             # Minimal validation → no API calls needed
             self.available = True
-            logger.info(f"✅ SNS ready (region={self.region})")
+            logger.info(f"SNS ready (topic_arn={self.topic_arn}, region={self.region})")
 
         except Exception as e:
             logger.error(f"SNS init failed: {str(e)}")
             self.available = False
+
+    # ───────────────────────────────────────────────
+    # Topic
+    # ───────────────────────────────────────────────
+
+    def get_topic_arn(self) -> Optional[str]:
+        """Return the SNS topic ARN (from env var)."""
+        return self.topic_arn
+
+    # ───────────────────────────────────────────────
+    # Subscriptions
+    # ───────────────────────────────────────────────
+
+    def subscribe(self, email: str) -> Optional[str]:
+        """
+        Subscribe an email address to the SNS topic (idempotent).
+        AWS SNS subscribe is safe to call multiple times for the same email.
+        """
+        if not self.available or not email:
+            return None
+        try:
+            response = self.client.subscribe(
+                TopicArn=self.topic_arn,
+                Protocol='email',
+                Endpoint=email,
+                ReturnSubscriptionArn=True,
+            )
+            sub_arn = response['SubscriptionArn']
+            logger.info(f"SNS subscription for {email}: {sub_arn}")
+            return sub_arn
+        except ClientError as e:
+            code = e.response.get('Error', {}).get('Code', 'Unknown')
+            logger.error(f"[SNS] subscribe failed — {code}: {e}")
+            return None
 
     # ───────────────────────────────────────────────
     # Publish
@@ -58,7 +92,7 @@ class SNSService:
             return False
 
         try:
-            logger.info(f"Publishing to SNS → {self.topic_arn}")
+            logger.info(f"Publishing SNS message to {self.topic_arn}")
 
             response = self.client.publish(
                 TopicArn=self.topic_arn,
@@ -66,7 +100,7 @@ class SNSService:
                 Message=message,
             )
 
-            logger.info(f"✅ SNS SUCCESS — MessageId={response.get('MessageId')}")
+            logger.info(f"SNS publish OK — MessageId={response.get('MessageId')}")
             return True
 
         except ClientError as e:
