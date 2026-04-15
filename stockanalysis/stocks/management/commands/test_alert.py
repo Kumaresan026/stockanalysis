@@ -43,14 +43,17 @@ class Command(BaseCommand):
         ))
 
         # ── Step 1: Credentials ───────────────────────────────────────
-        self.stdout.write('\n[1] AWS Credentials')
-        from stocks.services.aws_session import check_aws_available, get_boto3_session
-        if not check_aws_available():
-            self.stdout.write(self.style.ERROR(
-                '  [X] Credentials INVALID - refresh in EB Console then re-run.'
+        self.stdout.write('\n[1] AWS IAM Role Check')
+        try:
+            import boto3
+            sts      = boto3.client('sts')
+            identity = sts.get_caller_identity()
+            self.stdout.write(self.style.SUCCESS(
+                f'  [OK] IAM Role valid: {identity.get("Arn", "?")[:60]}'
             ))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'  [X] IAM role check failed: {e}'))
             return
-        self.stdout.write(self.style.SUCCESS('  [OK] Credentials valid'))
 
         # ── Step 2: SNS Topic & Subscriptions ───────────────────────
         self.stdout.write('\n[2] SNS Email Subscription')

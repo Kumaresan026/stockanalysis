@@ -113,9 +113,9 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 # ─── AWS Configuration ────────────────────────────────────────────────
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', '')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
-AWS_SESSION_TOKEN = os.getenv('AWS_SESSION_TOKEN', '')  # Required for AWS Academy
+# Authentication is handled by the LabRole EC2 instance profile on EB.
+# boto3 uses the default credential provider chain automatically.
+# DO NOT add AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN.
 AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
 
 # DynamoDB Table Names

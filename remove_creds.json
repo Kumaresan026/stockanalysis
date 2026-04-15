@@ -1,0 +1,17 @@
+[
+  {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "AWS_ACCESS_KEY_ID",
+    "Value": ""
+  },
+  {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "AWS_SECRET_ACCESS_KEY",
+    "Value": ""
+  },
+  {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "AWS_SESSION_TOKEN",
+    "Value": ""
+  }
+]

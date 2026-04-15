@@ -1,61 +1,49 @@
 """
-CloudWatch Service — boto3 integration for Amazon CloudWatch Logs.
+CloudWatch Service — IAM role authentication via default credential chain.
 
-Logs all system activities: stock fetches, SQS messages,
-Lambda executions, and alert triggers.
+No credential injection. boto3 uses the EC2 instance profile (LabRole) on EB.
+All methods catch exceptions and fail gracefully — logging must NEVER crash the app.
 """
 
 import os
 import time
 import logging
-from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
-from botocore.exceptions import ClientError, NoCredentialsError
-from stocks.services.aws_session import get_boto3_session, check_aws_available
+from botocore.exceptions import ClientError
+from stocks.services.aws_session import get_client
 
 logger = logging.getLogger('stocks')
 
 
 class CloudWatchService:
     """
-    Service class for Amazon CloudWatch Logs via boto3.
-    Supports AWS Academy temporary credentials via AWS_SESSION_TOKEN.
+    CloudWatch Logs — uses LabRole instance profile on EB.
+    Zero credential injection; boto3 handles auth automatically.
+    All logging operations are fully exception-safe (best-effort only).
     """
 
     def __init__(self):
-        """Initialize boto3 CloudWatch Logs client."""
-        self.log_group = os.getenv('CLOUDWATCH_LOG_GROUP', 'stock-platform-logs')
-        self.sequence_tokens = {}
-        self.available = check_aws_available()
-        if not self.available:
-            logger.warning("AWS credentials not configured. CloudWatch unavailable.")
-            return
-        try:
-            session = get_boto3_session()
-            self.client = session.client('logs')
-            logger.info("CloudWatch service initialized successfully.")
-        except (NoCredentialsError, Exception) as e:
-            self.available = False
-            logger.warning(f"CloudWatch init failed: {e}")
+        """Lightweight init — no AWS calls."""
+        self.log_group       = os.getenv('CLOUDWATCH_LOG_GROUP', 'stock-platform-logs')
+        self._client         = None   # lazy
+        self._sequence_tokens: dict  = {}
 
-    # ── Log Group & Stream Management ─────────────────────────────────
+    # ── Lazy boto3 client ─────────────────────────────────────────────────────
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = get_client('logs')
+        return self._client
+
+    # ── Log Group & Stream Management ─────────────────────────────────────────
 
     def create_log_group(self) -> bool:
-        """
-        Create the CloudWatch log group if it doesn't exist.
-
-        Returns:
-            True on success, False on failure.
-        """
-        if not self.available:
-            return False
-
+        """Create the CloudWatch log group if it doesn't exist."""
         try:
             self.client.create_log_group(logGroupName=self.log_group)
             logger.info(f"CloudWatch log group '{self.log_group}' created.")
-
-            # Set retention policy (30 days)
             self.client.put_retention_policy(
                 logGroupName=self.log_group,
                 retentionInDays=30,
@@ -65,107 +53,75 @@ class CloudWatchService:
             if e.response['Error']['Code'] == 'ResourceAlreadyExistsException':
                 logger.info(f"Log group '{self.log_group}' already exists.")
                 return True
-            logger.error(f"Error creating log group: {e}")
+            logger.warning(f"[CloudWatch] create_log_group failed: {e}")
+            return False
+        except Exception as e:
+            logger.warning(f"[CloudWatch] create_log_group failed: {e}")
             return False
 
     def create_log_stream(self, stream_name: str) -> bool:
-        """
-        Create a log stream within the log group.
-
-        Args:
-            stream_name: Name of the log stream.
-
-        Returns:
-            True on success.
-        """
-        if not self.available:
-            return False
-
+        """Create a log stream within the log group."""
         try:
             self.client.create_log_stream(
                 logGroupName=self.log_group,
                 logStreamName=stream_name,
             )
-            logger.info(f"CloudWatch log stream '{stream_name}' created.")
             return True
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceAlreadyExistsException':
                 return True
-            logger.error(f"Error creating log stream: {e}")
+            logger.warning(f"[CloudWatch] create_log_stream failed: {e}")
+            return False
+        except Exception as e:
+            logger.warning(f"[CloudWatch] create_log_stream failed: {e}")
             return False
 
-    # ── Log Events ────────────────────────────────────────────────────
+    # ── Log Events ────────────────────────────────────────────────────────────
 
-    def put_log_events(self, stream_name: str,
-                       messages: List[str]) -> bool:
-        """
-        Write log events to a CloudWatch log stream.
-
-        Args:
-            stream_name: Target log stream.
-            messages: List of log message strings.
-
-        Returns:
-            True on success, False on failure.
-        """
-        if not self.available:
-            return False
-
-        # Ensure log group and stream exist
-        self.create_log_group()
-        self.create_log_stream(stream_name)
-
+    def put_log_events(self, stream_name: str, messages: List[str]) -> bool:
+        """Write log events to a CloudWatch log stream."""
         try:
+            self.create_log_group()
+            self.create_log_stream(stream_name)
+
             log_events = [
-                {
-                    'timestamp': int(time.time() * 1000),
-                    'message': msg,
-                }
+                {'timestamp': int(time.time() * 1000), 'message': msg}
                 for msg in messages
             ]
 
-            kwargs = {
-                'logGroupName': self.log_group,
+            kwargs: dict = {
+                'logGroupName':  self.log_group,
                 'logStreamName': stream_name,
-                'logEvents': log_events,
+                'logEvents':     log_events,
             }
-
-            # Include sequence token if available
-            token = self.sequence_tokens.get(stream_name)
+            token = self._sequence_tokens.get(stream_name)
             if token:
                 kwargs['sequenceToken'] = token
 
             response = self.client.put_log_events(**kwargs)
-            self.sequence_tokens[stream_name] = response.get(
-                'nextSequenceToken', ''
-            )
-            logger.info(
-                f"Logged {len(messages)} event(s) to '{stream_name}'."
-            )
+            self._sequence_tokens[stream_name] = response.get('nextSequenceToken', '')
+            logger.info(f"Logged {len(messages)} event(s) to '{stream_name}'.")
             return True
 
         except ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code in ('InvalidSequenceTokenException',
-                               'DataAlreadyAcceptedException'):
-                expected_token = e.response['Error'].get('expectedSequenceToken')
-                if expected_token:
-                    self.sequence_tokens[stream_name] = expected_token
+            code = e.response['Error']['Code']
+            if code in ('InvalidSequenceTokenException', 'DataAlreadyAcceptedException'):
+                expected = e.response['Error'].get('expectedSequenceToken')
+                if expected:
+                    self._sequence_tokens[stream_name] = expected
                     return self.put_log_events(stream_name, messages)
             logger.warning(f"[CloudWatch] put_log_events ClientError: {e}")
             return False
         except Exception as e:
-            # Catches timeouts, EndpointConnectionError, etc. when credentials expire.
-            # Log to Python logger only — never raise to the caller.
             logger.warning(f"[CloudWatch] put_log_events failed ({type(e).__name__}): {e}")
             return False
 
-    # ── Convenience Logging Methods ───────────────────────────────────
+    # ── Convenience Logging Methods ───────────────────────────────────────────
 
     def log_stock_fetch(self, symbol: str, source: str, success: bool):
         """Log a stock data fetch event."""
         try:
-            status = "SUCCESS" if success else "FAILED"
+            status  = "SUCCESS" if success else "FAILED"
             message = f"[STOCK_FETCH] {status} | Symbol: {symbol} | Source: {source}"
             self.put_log_events('stock-fetches', [message])
         except Exception:

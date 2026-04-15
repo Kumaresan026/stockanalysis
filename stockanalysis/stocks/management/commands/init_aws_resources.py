@@ -33,28 +33,21 @@ class Command(BaseCommand):
         self.stdout.write('  Initializing AWS Cloud Resources')
         self.stdout.write('=' * 60)
 
-        # Verify credentials first -- fail loudly if missing
-        self.stdout.write('\n[0/6] Credential Check')
+        # Verify IAM role is accessible (fail fast if LabRole not attached)
+        self.stdout.write('\n[0/6] IAM Role Check')
         try:
-            from stocks.services.aws_session import get_boto3_session, check_aws_available
-            if not check_aws_available():
-                self.stdout.write(self.style.ERROR(
-                    '  [X] FATAL: AWS credentials are MISSING or INVALID.\n'
-                    '  Cannot create any resources without valid credentials.\n\n'
-                    '  Fix:\n'
-                    '  1. AWS Academy -> AWS Details -> AWS CLI (copy 3 lines)\n'
-                    '  2. EB Console -> Configuration -> Software -> Environment Properties\n'
-                    '     Set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN\n'
-                    '  3. Click Apply, wait for restart, then re-run this command.'
-                ))
-                sys.exit(1)
-            session  = get_boto3_session()
-            identity = session.client('sts').get_caller_identity()
+            import boto3
+            sts      = boto3.client('sts', region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
+            identity = sts.get_caller_identity()
             self.stdout.write(self.style.SUCCESS(
-                f'  [OK] Credentials valid: {identity.get("Arn", "unknown")}'
+                f'  [OK] IAM role valid: {identity.get("Arn", "unknown")}'
             ))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'  [X] Credential error: {e}'))
+            self.stdout.write(self.style.ERROR(
+                f'  [X] FATAL: AWS IAM role not accessible: {e}\n'
+                '  On EB: Ensure LabRole is set as EC2 instance profile.\n'
+                '  Locally: Run aws configure with valid credentials first.'
+            ))
             sys.exit(1)
 
         all_ok = True
@@ -64,12 +57,8 @@ class Command(BaseCommand):
         try:
             from stocks.services.dynamodb_service import DynamoDBService
             db = DynamoDBService()
-            if db.available:
-                db.create_stock_tables()
-                self.stdout.write(self.style.SUCCESS('  [OK] DynamoDB: all tables ready.'))
-            else:
-                self.stdout.write(self.style.ERROR('  [X] DynamoDB: service unavailable.'))
-                all_ok = False
+            db.create_stock_tables()
+            self.stdout.write(self.style.SUCCESS('  [OK] DynamoDB: all tables ready.'))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'  [X] DynamoDB error: {e}'))
             all_ok = False
@@ -79,8 +68,7 @@ class Command(BaseCommand):
         try:
             from stocks.services.s3_service import S3Service
             s3 = S3Service()
-            if s3.available:
-                created = s3.create_bucket()
+            created = s3.create_bucket()
                 if created:
                     self.stdout.write(self.style.SUCCESS(
                         f'  [OK] S3: bucket "{s3.bucket_name}" ready.'
@@ -119,8 +107,7 @@ class Command(BaseCommand):
         try:
             from stocks.services.sqs_service import SQSService
             sqs = SQSService()
-            if sqs.available:
-                url = sqs.create_queue()
+            url = sqs.get_queue_url()
                 if url:
                     self.stdout.write(self.style.SUCCESS(
                         f'  [OK] SQS: queue "{sqs.queue_name}" ready.\n'
@@ -142,7 +129,7 @@ class Command(BaseCommand):
             from stocks.services.sns_service import SNSService
             sns = SNSService()
             if sns.available:
-                arn = sns.create_topic()
+                arn = sns.topic_arn
                 if arn:
                     self.stdout.write(self.style.SUCCESS(
                         f'  [OK] SNS: topic "{sns.topic_name}" ready.\n'
@@ -171,13 +158,8 @@ class Command(BaseCommand):
         try:
             from stocks.services.cloudwatch_service import CloudWatchService
             cw = CloudWatchService()
-            if cw.available:
-                cw.create_log_group()
-                self.stdout.write(self.style.SUCCESS('  [OK] CloudWatch: log group ready.'))
-            else:
-                self.stdout.write(self.style.WARNING(
-                    '  [!] CloudWatch: unavailable (non-critical, continuing).'
-                ))
+            cw.create_log_group()
+            self.stdout.write(self.style.SUCCESS('  [OK] CloudWatch: log group ready.'))
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'  [!] CloudWatch warning: {e} (non-critical)'))
 
@@ -189,8 +171,7 @@ class Command(BaseCommand):
             try:
                 from stocks.services.lambda_service import LambdaService
                 lsvc = LambdaService()
-                if lsvc.available:
-                    queue_name = os.getenv('SQS_QUEUE_NAME', 'stock-events-queue')
+                queue_name = os.getenv('SQS_QUEUE_NAME', 'stock-events-queue')
 
                     # Deploy stock_processor
                     self.stdout.write('  Deploying stock_processor...')

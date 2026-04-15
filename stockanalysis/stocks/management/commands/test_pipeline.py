@@ -80,20 +80,14 @@ class Command(BaseCommand):
         # -----------------------------------------------------------------
         # 0. Credential Check
         # -----------------------------------------------------------------
-        self.stdout.write('\n[0] AWS Credential Check')
+        self.stdout.write('\n[0] AWS IAM Role Check')
         try:
-            from stocks.services.aws_session import check_aws_available, get_boto3_session
-            if not check_aws_available():
-                fail_('Credentials', 'AWS credentials missing or expired')
-                self.stdout.write(self.style.ERROR(
-                    '\n  Fix: Update AWS_ACCESS_KEY_ID / SECRET / TOKEN in EB Console\n'
-                ))
-                return
-            session  = get_boto3_session()
-            identity = session.client('sts').get_caller_identity()
-            pass_('Credentials', identity.get('Arn', '')[:60])
+            import boto3
+            sts      = boto3.client('sts')
+            identity = sts.get_caller_identity()
+            pass_('IAM Role', identity.get('Arn', '')[:60])
         except Exception as e:
-            fail_('Credentials', str(e))
+            fail_('IAM Role', str(e))
             return
 
         # -----------------------------------------------------------------
@@ -178,24 +172,20 @@ class Command(BaseCommand):
             from stocks.services.dynamodb_service import DynamoDBService
             db         = DynamoDBService()
             table_name = os.getenv('DYNAMODB_STOCKS_TABLE', 'stock_data')
-            if not db.available:
-                fail_('DynamoDB Write', 'DynamoDB service unavailable')
+            import boto3.dynamodb.conditions as cond
+            table    = db.dynamodb.Table(table_name)
+            response = table.query(
+                KeyConditionExpression=cond.Key('symbol').eq(symbol),
+                ScanIndexForward=False,
+                Limit=1,
+            )
+            items = response.get('Items', [])
+            if items:
+                item = items[0]
+                pass_('DynamoDB Write Successful',
+                      f"table={table_name} symbol={symbol} price={item.get('price')}")
             else:
-                # Query for the record just written
-                import boto3.dynamodb.conditions as cond
-                table    = db.dynamodb.Table(table_name)
-                response = table.query(
-                    KeyConditionExpression=cond.Key('symbol').eq(symbol),
-                    ScanIndexForward=False,
-                    Limit=1,
-                )
-                items = response.get('Items', [])
-                if items:
-                    item = items[0]
-                    pass_('DynamoDB Write Successful',
-                          f"table={table_name} symbol={symbol} price={item.get('price')}")
-                else:
-                    fail_('DynamoDB Write', f'No record found for symbol={symbol} in {table_name}')
+                fail_('DynamoDB Write', f'No record found for symbol={symbol} in {table_name}')
         except Exception as e:
             fail_('DynamoDB Write', str(e))
 
@@ -207,12 +197,8 @@ class Command(BaseCommand):
             from stocks.services.s3_service import S3Service
             s3     = S3Service()
             bucket = s3.bucket_name
-            if not s3.available:
-                fail_('S3 Upload', 'S3 service unavailable')
-            else:
-                # Check for any analytics file for this symbol
-                prefix  = f'analytics/{symbol}/'
-                objects = s3.list_objects(prefix=prefix, max_keys=5)
+            prefix  = f'analytics/{symbol}/'
+            objects = s3.list_objects(prefix=prefix, max_keys=5)
                 if not objects:
                     # Do a test upload directly to prove write access
                     test_key     = f'diagnostics/test_pipeline_{run_id}.json'

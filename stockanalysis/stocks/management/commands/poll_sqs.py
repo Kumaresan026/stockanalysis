@@ -24,7 +24,6 @@ from django.core.management.base import BaseCommand
 from stocks.services.sqs_service import SQSService
 from stocks.services.dynamodb_service import DynamoDBService
 from stocks.services.sns_service import SNSService
-from stocks.services.aws_session import check_aws_available
 from stocks.services.alert_evaluator import evaluate_and_notify
 
 # Import the lambda handlers (run locally on EB, or by real Lambda on AWS)
@@ -79,21 +78,6 @@ class Command(BaseCommand):
 
         while self.running:
             try:
-                # Periodically re-validate credentials (catches mid-session expiry)
-                if time.time() - last_credential_check > CREDENTIAL_RECHECK_INTERVAL:
-                    if not check_aws_available():
-                        logger.error(
-                            "AWS credentials EXPIRED mid-session. "
-                            "Update them in EB Console → Configuration → Software → "
-                            "Environment Properties, then restart the worker."
-                        )
-                        # Keep checking every 60s until refreshed (EB restart required)
-                        time.sleep(60)
-                        sqs = SQSService()
-                        continue
-                    last_credential_check = time.time()
-                    logger.info("Periodic credential recheck: still valid.")
-
                 # Receive up to 5 messages with 10-second long polling
                 messages = sqs.receive_message(max_messages=5, wait_time=10)
                 consecutive_errors = 0  # Reset on success
@@ -183,42 +167,25 @@ class Command(BaseCommand):
 
     def _wait_for_valid_credentials_and_queue(self):
         """
-        Block until AWS credentials are valid and the SQS queue URL is resolvable.
-        Retries every 30 seconds. Returns (SQSService, queue_url) or (None, None).
+        Block until the SQS queue URL is resolvable.
+        Retries with backoff. Returns (SQSService, queue_url) or (None, None).
         """
         attempt = 0
         while self.running:
             attempt += 1
-            if not check_aws_available():
-                logger.warning(
-                    f"[Attempt {attempt}] AWS credentials invalid or expired. "
-                    "Update AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN "
-                    "in EB Console → Configuration → Software → Environment Properties. "
-                    "Retrying in 30s..."
-                )
-                self.stdout.write(
-                    self.style.ERROR(
-                        f"[{attempt}] AWS credentials not available — waiting 30s..."
-                    )
-                )
-                time.sleep(30)
-                continue
-
             sqs = SQSService()
-            if not sqs.available:
-                logger.warning(f"[Attempt {attempt}] SQS service unavailable — waiting 30s...")
-                time.sleep(30)
-                continue
-
             queue_url = sqs.get_queue_url()
             if queue_url:
                 return sqs, queue_url
 
             logger.warning(
-                f"[Attempt {attempt}] SQS queue not found. "
-                "Run 'python manage.py init_aws_resources' to create it. "
-                "Retrying in 30s..."
+                f"[Attempt {attempt}] SQS queue not reachable. "
+                "Ensure LabRole instance profile is attached and "
+                "the queue exists. Retrying in 15s..."
             )
-            time.sleep(30)
+            self.stdout.write(
+                self.style.WARNING(f"[{attempt}] SQS not reachable — waiting 15s...")
+            )
+            time.sleep(15)
 
         return None, None

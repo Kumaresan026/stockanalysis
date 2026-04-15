@@ -48,10 +48,6 @@ def evaluate_and_notify(symbol: str, price: float, volume: int,
         logger.warning(f"[AlertEval] Skipping {symbol} — invalid price {price}")
         return []
 
-    if not dynamodb_service.available:
-        logger.warning(f"[AlertEval] DynamoDB unavailable — cannot evaluate alerts for {symbol}")
-        return []
-
     # Fetch all active alerts for this symbol from DynamoDB
     table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
     try:

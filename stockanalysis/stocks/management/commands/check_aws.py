@@ -62,27 +62,20 @@ class Command(BaseCommand):
     # -------------------------------------------------------------------------
 
     def _check_credentials(self, verbose):
-        self.stdout.write('\n[1/6] AWS Credentials')
-        key_id = os.getenv('AWS_ACCESS_KEY_ID', '')
-        secret = os.getenv('AWS_SECRET_ACCESS_KEY', '')
-        token  = os.getenv('AWS_SESSION_TOKEN', '')
+        self.stdout.write('\n[1/6] AWS Identity (IAM Role)')
         region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
-
+        self.stdout.write(f'  AWS_DEFAULT_REGION: {region}')
         self.stdout.write(
-            f'  AWS_ACCESS_KEY_ID    : {"SET (" + key_id[:6] + "...)" if key_id else "MISSING [X]"}'
+            '  Auth method: EC2 Instance Profile (LabRole) — '
+            'no credentials in environment variables'
         )
-        self.stdout.write(f'  AWS_SECRET_ACCESS_KEY: {"SET" if secret else "MISSING [X]"}')
-        self.stdout.write(
-            f'  AWS_SESSION_TOKEN    : {"SET" if token else "NOT SET (ok if using IAM role)"}'
-        )
-        self.stdout.write(f'  AWS_DEFAULT_REGION   : {region}')
 
         try:
-            from stocks.services.aws_session import get_boto3_session
-            session  = get_boto3_session()
-            identity = session.client('sts').get_caller_identity()
+            import boto3
+            sts      = boto3.client('sts', region_name=region)
+            identity = sts.get_caller_identity()
             arn      = identity.get('Arn', 'unknown')
-            self.stdout.write(self.style.SUCCESS('  [OK] Credentials VALID'))
+            self.stdout.write(self.style.SUCCESS('  [OK] IAM Role VALID'))
             if verbose:
                 self.stdout.write(f'       Identity: {arn}')
                 self.stdout.write(f'       Account : {identity.get("Account", "?")}')
@@ -93,22 +86,18 @@ class Command(BaseCommand):
                 code = e.response.get('Error', {}).get('Code', '')
             if code in ('ExpiredTokenException', 'ExpiredToken'):
                 self.stdout.write(self.style.ERROR(
-                    '  [X] Credentials EXPIRED - AWS Academy tokens last ~4-6 hours.\n'
-                    '      Fix: AWS Academy -> AWS Details -> AWS CLI -> copy credentials\n'
-                    '           EB Console -> Configuration -> Software -> update all 3 vars'
+                    '  [X] Token EXPIRED\n'
+                    '      On EB: This should not happen with LabRole instance profile.\n'
+                    '      Check: EB Console → Configuration → Security → EC2 instance profile'
                 ))
             else:
-                self.stdout.write(self.style.ERROR(f'  [X] Credential check failed: {e}'))
+                self.stdout.write(self.style.ERROR(f'  [X] IAM identity check failed: {e}'))
             return False
 
     def _check_dynamodb(self, verbose):
         self.stdout.write('\n[2/6] DynamoDB Tables')
         from stocks.services.dynamodb_service import DynamoDBService
         db = DynamoDBService()
-        if not db.available:
-            self.stdout.write(self.style.ERROR('  [X] DynamoDB service unavailable'))
-            return False
-
         tables = [
             os.getenv('DYNAMODB_ALERTS_TABLE',    'alert_rules'),
             os.getenv('DYNAMODB_STOCKS_TABLE',     'stock_data'),
@@ -163,10 +152,6 @@ class Command(BaseCommand):
         s3     = S3Service()
         bucket = s3.bucket_name
         self.stdout.write(f'  Bucket: {bucket}')
-        if not s3.available:
-            self.stdout.write(self.style.ERROR('  [X] S3 service unavailable'))
-            return False
-
         try:
             s3.client.head_bucket(Bucket=bucket)
             self.stdout.write(self.style.SUCCESS('  [OK] Bucket exists and is accessible'))
@@ -199,10 +184,6 @@ class Command(BaseCommand):
         self.stdout.write('\n[4/6] SQS')
         from stocks.services.sqs_service import SQSService
         sqs = SQSService()
-        if not sqs.available:
-            self.stdout.write(self.style.ERROR('  [X] SQS service unavailable'))
-            return False
-
         url = sqs.get_queue_url()
         if not url:
             self.stdout.write(self.style.ERROR(
@@ -275,10 +256,6 @@ class Command(BaseCommand):
         self.stdout.write('\n[6/6] Lambda Functions')
         from stocks.services.lambda_service import LambdaService
         lsvc = LambdaService()
-        if not lsvc.available:
-            self.stdout.write(self.style.ERROR('  [X] Lambda service unavailable'))
-            return False
-
         functions = [
             os.getenv('LAMBDA_STOCK_PROCESSOR', 'stock_processor'),
             os.getenv('LAMBDA_ALERT_HANDLER',   'alert_handler'),
@@ -313,16 +290,14 @@ class Command(BaseCommand):
 
     def _print_credential_fix_guide(self):
         self.stdout.write(self.style.ERROR(
-            '\n  [STOP] No valid credentials. All other checks skipped.\n'
-            '\n  HOW TO FIX:\n'
-            '  1. Open AWS Academy -> Start Lab -> AWS Details -> AWS CLI\n'
-            '  2. Copy the 3 credential values\n'
-            '  3. EB Console -> Configuration -> Software -> Environment Properties:\n'
-            '       AWS_ACCESS_KEY_ID     = <paste>\n'
-            '       AWS_SECRET_ACCESS_KEY = <paste>\n'
-            '       AWS_SESSION_TOKEN     = <paste>\n'
-            '  4. Click Apply (EB restarts in ~60 seconds)\n'
-            '  5. Re-run: python manage.py check_aws\n'
+            '\n  [STOP] IAM role credentials unavailable. All other checks skipped.\n'
+            '\n  HOW TO FIX (Elastic Beanstalk):\n'
+            '  1. EB Console → Configuration → Security\n'
+            '  2. Ensure EC2 instance profile is set to: LabRole\n'
+            '  3. Redeploy the application\n'
+            '\n  HOW TO FIX (Local development):\n'
+            '  1. Run: aws configure\n'
+            '     or set AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY in .env\n'
         ))
 
     def _print_summary(self, results):

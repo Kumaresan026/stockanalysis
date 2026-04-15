@@ -40,7 +40,6 @@ from stocks.services.alert_evaluator import evaluate_and_notify
 from stocks.events.producer import StockEventProducer
 from stocks.analytics.indicators import StockIndicatorService
 from stocks.services.lambda_service import LambdaService
-from stocks.services.aws_session import check_aws_available
 
 logger = logging.getLogger('stocks')
 
@@ -166,7 +165,6 @@ def dashboard(request):
         'losers': losers,
         'watchlist_stocks': watchlist_stocks,
         'search_form': StockSearchForm(),
-        'aws_connected': check_aws_available(),
     }
     return render(request, 'stocks/dashboard.html', context)
 
@@ -399,17 +397,16 @@ def alerts_view(request):
     # Fresh instances on every request
     dynamodb_service = _dynamodb()
 
-    # Try DynamoDB first — filtered by both user_id and username (fallback)
+    # Try DynamoDB — returns [] if unavailable or on any error
     dynamo_alerts = []
-    if dynamodb_service.available:
-        try:
-            dynamo_alerts = dynamodb_service.get_user_alerts(
-                user_id,
-                status='active',
-                username=request.user.username,
-            )
-        except Exception as e:
-            logger.warning(f"Could not fetch alerts from DynamoDB: {e}")
+    try:
+        dynamo_alerts = dynamodb_service.get_user_alerts(
+            user_id,
+            status='active',
+            username=request.user.username,
+        )
+    except Exception as e:
+        logger.warning(f"Could not fetch alerts from DynamoDB: {e}")
 
     # Also get SQLite alerts for display
     sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
@@ -448,7 +445,6 @@ def alerts_view(request):
     context = {
         'alerts': sqlite_alerts,
         'dynamo_alerts': dynamo_alerts,
-        'aws_connected': dynamodb_service.available,
     }
     return render(request, 'stocks/alerts.html', context)
 
@@ -557,70 +553,60 @@ def create_alert(request):
                 logger.warning(f"[SQS/Lambda] Alert pipeline failed for {symbol}: {e}")
 
             # ── Send alert creation confirmation email ────────────────
-            # Re-subscribe on every alert creation to handle the case where
-            # SNS was unavailable or the email was not confirmed yet.
             current_price  = float(stock_data.get('price', 0))
-            ok             = False                            # SNS notification not sent yet
             user_email     = request.user.email
             fallback_email = os.getenv('SNS_ALERT_EMAIL', '')
-            notify_email   = user_email or fallback_email    # used in success message
+            notify_email   = user_email or fallback_email
 
-            if sns_service.available:
-                # Subscribe user email (idempotent — safe on every creation).
-                # Falls back to SNS_ALERT_EMAIL if user has no email on their account.
-                subscribe_target = user_email or fallback_email
-                if subscribe_target:
-                    try:
-                        sns_service.subscribe(subscribe_target)
-                    except Exception:
-                        pass  # best-effort; global subscribers still receive the message
+            # Subscribe user email (idempotent — safe to call every time)
+            subscribe_target = user_email or fallback_email
+            if subscribe_target:
+                try:
+                    sns_service.subscribe(subscribe_target)
+                except Exception:
+                    pass
 
-                # Human-readable condition explanation
-                condition_map = {
-                    'PRICE_ABOVE':  f'rises ABOVE ${float(threshold):.2f}',
-                    'PRICE_BELOW':  f'falls BELOW ${float(threshold):.2f}',
-                    'VOLUME_ABOVE': f'volume exceeds {int(threshold):,}',
-                    'CHANGE_ABOVE': f'gains more than {float(threshold):.2f}%',
-                    'CHANGE_BELOW': f'drops more than {abs(float(threshold)):.2f}%',
-                }
-                condition_text = condition_map.get(condition, f'{condition} {threshold}')
+            # Human-readable condition explanation
+            condition_map = {
+                'PRICE_ABOVE':  f'rises ABOVE ${float(threshold):.2f}',
+                'PRICE_BELOW':  f'falls BELOW ${float(threshold):.2f}',
+                'VOLUME_ABOVE': f'volume exceeds {int(threshold):,}',
+                'CHANGE_ABOVE': f'gains more than {float(threshold):.2f}%',
+                'CHANGE_BELOW': f'drops more than {abs(float(threshold)):.2f}%',
+            }
+            condition_text = condition_map.get(condition, f'{condition} {threshold}')
 
-                confirmation_subject = (
-                    f"Alert Set: {symbol} {condition.replace('_', ' ').title()}"
-                    f" ${float(threshold):.2f}"
+            confirmation_subject = (
+                f"Alert Set: {symbol} {condition.replace('_', ' ').title()}"
+                f" ${float(threshold):.2f}"
+            )
+            confirmation_message = (
+                f"Hi {request.user.username},\n\n"
+                f"Your stock alert has been set successfully.\n"
+                f"{'=' * 50}\n\n"
+                f"  Stock     : {symbol} ({stock_data.get('name', symbol)})\n"
+                f"  Condition : {condition.replace('_', ' ')}\n"
+                f"  Threshold : ${float(threshold):.2f}\n"
+                f"  Current   : ${current_price:.2f}\n\n"
+                f"  You will receive an email when {symbol} {condition_text}.\n\n"
+                f"{'=' * 50}\n"
+                f"Manage your alerts: https://{request.get_host()}/alerts/\n\n"
+                f"-- Cloud Stock Market Analysis Platform"
+            )
+
+            ok = sns_service.publish(
+                subject=confirmation_subject,
+                message=confirmation_message,
+            )
+            if ok:
+                logger.info(
+                    f"Alert confirmation published via SNS — "
+                    f"symbol={symbol} condition={condition} email={notify_email}"
                 )
-                confirmation_message = (
-                    f"Hi {request.user.username},\n\n"
-                    f"Your stock alert has been set successfully.\n"
-                    f"{'=' * 50}\n\n"
-                    f"  Stock     : {symbol} ({stock_data.get('name', symbol)})\n"
-                    f"  Condition : {condition.replace('_', ' ')}\n"
-                    f"  Threshold : ${float(threshold):.2f}\n"
-                    f"  Current   : ${current_price:.2f}\n\n"
-                    f"  You will receive an email when {symbol} {condition_text}.\n\n"
-                    f"{'=' * 50}\n"
-                    f"Manage your alerts: https://{request.get_host()}/alerts/\n\n"
-                    f"-- Cloud Stock Market Analysis Platform"
-                )
-
-                ok = sns_service.publish(
-                    subject=confirmation_subject,
-                    message=confirmation_message,
-                )
-                if ok:
-                    logger.info(
-                        f"Alert confirmation published via SNS — "
-                        f"symbol={symbol} condition={condition} email={notify_email}"
-                    )
-                else:
-                    logger.warning(
-                        f"SNS publish failed for {symbol} {condition}. "
-                        f"Check: topic ARN valid, email subscription confirmed."
-                    )
             else:
                 logger.warning(
-                    f"SNS unavailable — alert saved but no confirmation email sent. "
-                    f"User={request.user.username} symbol={symbol}"
+                    f"SNS publish failed for {symbol} {condition} — "
+                    f"alert saved, email notification skipped."
                 )
 
             # Log to CloudWatch
@@ -630,17 +616,17 @@ def create_alert(request):
                 f"dynamo={'ok' if dynamo_ok else 'FAILED'}"
             ))
 
-            if sns_service.available and ok:
+            if ok:
                 email_shown = notify_email or 'your registered email'
                 messages.success(
                     request,
                     f'✅ Alert created for {symbol}. Confirmation email sent to {email_shown}.'
                 )
             else:
-                messages.warning(
+                messages.success(
                     request,
-                    f'Alert saved for {symbol}. '
-                    f'Email notification unavailable — refresh AWS credentials and try again.'
+                    f'✅ Alert created for {symbol}. '
+                    f'Email notification will be sent when the condition is met.'
                 )
             return redirect('alerts')
     else:
@@ -656,18 +642,17 @@ def delete_alert(request, alert_id):
     alert = get_object_or_404(Alert, id=alert_id, user=request.user)
     symbol = alert.stock.symbol
 
-    # Remove from DynamoDB first (primary store) — fresh instance, best-effort
+    # Remove from DynamoDB first (primary store) — best-effort
     _db = _dynamodb()
-    if _db.available:
-        table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
-        try:
-            deleted = _db.delete_item(table_name, {'alert_id': str(alert_id)})
-            if deleted:
-                logger.info(f"Alert {alert_id} deleted from DynamoDB.")
-            else:
-                logger.warning(f"Alert {alert_id} could not be deleted from DynamoDB.")
-        except Exception as e:
-            logger.warning(f"[DynamoDB] delete_alert failed for {alert_id}: {e}")
+    table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
+    try:
+        deleted = _db.delete_item(table_name, {'alert_id': str(alert_id)})
+        if deleted:
+            logger.info(f"Alert {alert_id} deleted from DynamoDB.")
+        else:
+            logger.warning(f"Alert {alert_id} could not be deleted from DynamoDB.")
+    except Exception as e:
+        logger.warning(f"[DynamoDB] delete_alert failed for {alert_id}: {e}")
 
     # Remove from SQLite (always succeeds regardless of AWS status)
     alert.delete()
