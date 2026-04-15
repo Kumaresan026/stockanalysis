@@ -16,19 +16,11 @@ numpy>=1.24.0
 # Environment Variables
 python-dotenv>=1.0.0
 
-# Code Quality
-pylint>=3.0.0
-pylint-django>=2.5.0
-
-# Testing
-pytest>=7.4.0
-pytest-django>=4.5.0
-
 # Production
 whitenoise>=6.5.0
 
-# External Library: Stock Event Engine
-# Published by: Kumaresan (kumaresan2126@gmail.com)
-# Installed from the stock-event-engine/ subdirectory in this repo.
-# Provides: generate_signal, send_alert, PortfolioManager, calculate_indicators
-stock-event-engine==0.1.0
+# NOTE: stock-event-engine is NOT listed here because it is NOT on PyPI.
+# It is installed from the bundled stock-event-engine/ directory via
+# .ebextensions/02_packages.config container_commands/01_install_library.
+# Listing it here would cause pip to fail (package not found) and may abort
+# the entire pip install step, breaking all other packages.

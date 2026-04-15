@@ -9,12 +9,29 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from stock_event_engine.indicators import StockAnalyzer
-from stock_event_engine.signals import SignalDetector
-from stock_event_engine.exceptions import (
-    InsufficientDataError,
-    StockDataError,
-)
+# stock_event_engine is installed via .ebextensions/02_packages.config container_commands
+# (from the bundled stock-event-engine/ directory). Guard against import failure so
+# Django can still start even if the library install step was skipped.
+try:
+    from stock_event_engine.indicators import StockAnalyzer
+    from stock_event_engine.signals import SignalDetector
+    from stock_event_engine.exceptions import (
+        InsufficientDataError,
+        StockDataError,
+    )
+    _ENGINE_AVAILABLE = True
+except ImportError as _e:
+    import logging as _logging
+    _logging.getLogger('stocks').error(
+        f"stock_event_engine not installed — analytics disabled: {_e}. "
+        "Run: pip install stock-event-engine OR deploy via EB (02_packages.config installs it)."
+    )
+    StockAnalyzer = None
+    SignalDetector = None
+    InsufficientDataError = Exception
+    StockDataError = Exception
+    _ENGINE_AVAILABLE = False
+
 from stocks.services.dynamodb_service import DynamoDBService
 from stocks.services.cloudwatch_service import CloudWatchService
 
@@ -49,6 +66,10 @@ class StockIndicatorService:
             'indicators': {},
             'signals': {},
         }
+
+        if not _ENGINE_AVAILABLE:
+            result['error'] = 'stock_event_engine library not installed on this instance.'
+            return result
 
         try:
             analyzer = StockAnalyzer(prices, symbol)
