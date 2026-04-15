@@ -94,36 +94,45 @@ def dashboard(request):
         if not losers:
             gainers, losers = all_quotes[:4], all_quotes[4:]
 
-    # Log dashboard access to CloudWatch
-    cloudwatch_service.log_system_event(
-        'DASHBOARD_ACCESS',
-        f"User: {request.user.username if request.user.is_authenticated else 'anonymous'}"
-    )
+    # Log dashboard access to CloudWatch (best-effort — never crash the view)
+    try:
+        cloudwatch_service.log_system_event(
+            'DASHBOARD_ACCESS',
+            f"User: {request.user.username if request.user.is_authenticated else 'anonymous'}"
+        )
+    except Exception:
+        pass
 
     # Get user's watchlist if authenticated
     watchlist_stocks = []
     if request.user.is_authenticated:
-        watchlist_entries = Watchlist.objects.filter(user=request.user).select_related('stock')[:5]
-        for entry in watchlist_entries:
-            data = api_service.get_stock_quote(entry.stock.symbol)
-            watchlist_stocks.append(data)
+        try:
+            watchlist_entries = Watchlist.objects.filter(user=request.user).select_related('stock')[:5]
+            for entry in watchlist_entries:
+                data = api_service.get_stock_quote(entry.stock.symbol)
+                watchlist_stocks.append(data)
+        except Exception:
+            pass
 
-    # Evaluate alerts for all stocks shown on the dashboard
-    # This ensures alerts fire even if the user never visits a stock's detail page.
-    all_dashboard_stocks = gainers + losers + watchlist_stocks
-    seen_symbols = set()
-    for stock_data in all_dashboard_stocks:
-        sym = stock_data.get('symbol', '')
-        if sym and sym not in seen_symbols:
-            seen_symbols.add(sym)
-            evaluate_and_notify(
-                symbol=sym,
-                price=stock_data.get('price', 0),
-                volume=stock_data.get('volume', 0),
-                change_percent=stock_data.get('change_percent', 0),
-                dynamodb_service=dynamodb_service,
-                sns_service=sns_service,
-            )
+    # Evaluate alerts for all stocks shown on the dashboard.
+    # Wrapped in try/except — alert evaluation MUST NOT crash the page.
+    try:
+        all_dashboard_stocks = gainers + losers + watchlist_stocks
+        seen_symbols = set()
+        for stock_data in all_dashboard_stocks:
+            sym = stock_data.get('symbol', '')
+            if sym and sym not in seen_symbols:
+                seen_symbols.add(sym)
+                evaluate_and_notify(
+                    symbol=sym,
+                    price=stock_data.get('price', 0),
+                    volume=stock_data.get('volume', 0),
+                    change_percent=stock_data.get('change_percent', 0),
+                    dynamodb_service=dynamodb_service,
+                    sns_service=sns_service,
+                )
+    except Exception:
+        pass
 
     context = {
         'gainers': gainers,

@@ -24,6 +24,7 @@ import os
 import time
 import logging
 import boto3
+from botocore.config import Config
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
 
 logger = logging.getLogger('stocks')
@@ -157,56 +158,61 @@ def check_aws_available() -> bool:
     if _aws_cache['result'] is not None and (now - _aws_cache['checked_at']) < AWS_CACHE_TTL:
         return _aws_cache['result']
 
-    # Cache miss — verify with a real STS call
+    # Cache miss — verify with a real STS call.
+    # Use a SHORT timeout so expired / unreachable credentials fail fast and
+    # never block a web request for the boto3 default 60-second timeout.
     result = False
+    _STS_CFG = Config(
+        connect_timeout=3,      # 3 s — fail fast if endpoint unreachable
+        read_timeout=5,         # 5 s — fail fast if response stalls
+        retries={'max_attempts': 1},  # no retries — we want a quick answer
+    )
     try:
         session = get_boto3_session()
-        identity = session.client('sts').get_caller_identity()
+        identity = session.client('sts', config=_STS_CFG).get_caller_identity()
         logger.debug(f"AWS identity verified: {identity.get('Arn', 'unknown')}")
         result = True
 
     except ClientError as e:
         code = e.response.get('Error', {}).get('Code', '')
         if code in ('ExpiredTokenException', 'ExpiredToken'):
-            logger.error(
-                "AWS_SESSION_TOKEN EXPIRED. "
-                "Go to AWS Academy → AWS Details → AWS CLI, copy fresh credentials, "
-                "and paste them into EB Console → Configuration → Software → "
-                "Environment Properties (AWS_ACCESS_KEY_ID / SECRET / SESSION_TOKEN)."
+            logger.warning(
+                "[AWS] Session token EXPIRED — AWS features disabled. "
+                "App continues to serve pages without cloud services."
             )
         elif code in ('InvalidClientTokenId', 'AuthFailure', 'InvalidAccessKeyId'):
-            logger.error(
-                f"AWS credentials INVALID (code={code}). "
-                "Check AWS_ACCESS_KEY_ID is correct in the environment."
-            )
+            logger.warning(f"[AWS] Credentials invalid ({code}) — AWS features disabled.")
         elif code == 'AccessDenied':
-            # STS GetCallerIdentity is denied but credentials do exist — treat as ok.
-            logger.warning(
-                "STS:GetCallerIdentity was denied (AccessDenied) — "
-                "credentials exist but lack sts:GetCallerIdentity. Assuming available."
-            )
+            # STS GetCallerIdentity denied but credentials exist — treat as available.
+            logger.warning("[AWS] STS AccessDenied — assuming credentials ok via LabRole.")
             result = True
         else:
-            logger.warning(f"STS credential check failed ({code}): {e}")
+            logger.warning(f"[AWS] STS check failed ({code}): {e}")
 
     except NoCredentialsError:
-        if _using_explicit_credentials():
-            logger.warning("AWS credentials set in env but boto3 could not load them.")
-        else:
-            logger.warning(
-                "No AWS credentials found. "
-                "On EB: ensure LabRole is attached as the EC2 instance profile. "
-                "Locally: set AWS_ACCESS_KEY_ID / SECRET in .env."
-            )
+        logger.warning("[AWS] No credentials found — AWS features disabled.")
 
     except PartialCredentialsError as e:
-        logger.warning(f"Incomplete AWS credentials: {e}")
+        logger.warning(f"[AWS] Incomplete credentials: {e} — AWS features disabled.")
+
+    except Exception as e:
+        # Catches EndpointConnectionError, ConnectTimeoutError, ReadTimeoutError,
+        # SSLError, and any other unexpected boto3/network errors.
+        # These are common when Academy lab session expires — NEVER let them
+        # propagate to a Django view and cause a 500.
+        logger.warning(
+            f"[AWS] Credential check failed with {type(e).__name__}: {e} "
+            "— AWS features disabled. App continues without cloud services."
+        )
 
     # Update cache
     _aws_cache['result'] = result
     _aws_cache['checked_at'] = now
     _aws_cache['cache_key'] = cache_key
-    logger.debug(f"AWS credential cache updated: available={result}, ttl={AWS_CACHE_TTL}s, mode={'explicit' if _using_explicit_credentials() else 'iam_role'}")
+    logger.debug(
+        f"[AWS] Credential cache updated: available={result}, ttl={AWS_CACHE_TTL}s, "
+        f"mode={'explicit' if _using_explicit_credentials() else 'iam_role'}"
+    )
     return result
 
 

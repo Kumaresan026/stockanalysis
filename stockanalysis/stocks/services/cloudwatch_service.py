@@ -148,48 +148,67 @@ class CloudWatchService:
             error_code = e.response['Error']['Code']
             if error_code in ('InvalidSequenceTokenException',
                                'DataAlreadyAcceptedException'):
-                # Retry with corrected token
                 expected_token = e.response['Error'].get('expectedSequenceToken')
                 if expected_token:
                     self.sequence_tokens[stream_name] = expected_token
                     return self.put_log_events(stream_name, messages)
-            logger.error(f"Error putting log events: {e}")
+            logger.warning(f"[CloudWatch] put_log_events ClientError: {e}")
+            return False
+        except Exception as e:
+            # Catches timeouts, EndpointConnectionError, etc. when credentials expire.
+            # Log to Python logger only — never raise to the caller.
+            logger.warning(f"[CloudWatch] put_log_events failed ({type(e).__name__}): {e}")
             return False
 
     # ── Convenience Logging Methods ───────────────────────────────────
 
     def log_stock_fetch(self, symbol: str, source: str, success: bool):
         """Log a stock data fetch event."""
-        status = "SUCCESS" if success else "FAILED"
-        message = f"[STOCK_FETCH] {status} | Symbol: {symbol} | Source: {source}"
-        self.put_log_events('stock-fetches', [message])
+        try:
+            status = "SUCCESS" if success else "FAILED"
+            message = f"[STOCK_FETCH] {status} | Symbol: {symbol} | Source: {source}"
+            self.put_log_events('stock-fetches', [message])
+        except Exception:
+            pass
 
     def log_sqs_event(self, event_type: str, symbol: str, detail: str = ""):
         """Log an SQS event."""
-        message = f"[SQS_EVENT] Type: {event_type} | Symbol: {symbol} | {detail}"
-        self.put_log_events('sqs-events', [message])
+        try:
+            message = f"[SQS_EVENT] Type: {event_type} | Symbol: {symbol} | {detail}"
+            self.put_log_events('sqs-events', [message])
+        except Exception:
+            pass
 
     def log_lambda_execution(self, function_name: str, symbol: str,
                               result: str, duration_ms: int = 0):
         """Log a Lambda function execution."""
-        message = (
-            f"[LAMBDA_EXEC] Function: {function_name} | "
-            f"Symbol: {symbol} | Result: {result} | "
-            f"Duration: {duration_ms}ms"
-        )
-        self.put_log_events('lambda-executions', [message])
+        try:
+            message = (
+                f"[LAMBDA_EXEC] Function: {function_name} | "
+                f"Symbol: {symbol} | Result: {result} | "
+                f"Duration: {duration_ms}ms"
+            )
+            self.put_log_events('lambda-executions', [message])
+        except Exception:
+            pass
 
     def log_alert_trigger(self, symbol: str, condition: str,
                           threshold: float, price: float):
         """Log an alert trigger event."""
-        message = (
-            f"[ALERT_TRIGGER] Symbol: {symbol} | "
-            f"Condition: {condition} | Threshold: {threshold} | "
-            f"Price: {price}"
-        )
-        self.put_log_events('alert-triggers', [message])
+        try:
+            message = (
+                f"[ALERT_TRIGGER] Symbol: {symbol} | "
+                f"Condition: {condition} | Threshold: {threshold} | "
+                f"Price: {price}"
+            )
+            self.put_log_events('alert-triggers', [message])
+        except Exception:
+            pass
 
     def log_system_event(self, event: str, detail: str = ""):
         """Log a general system event."""
-        message = f"[SYSTEM] {event} | {detail}"
-        self.put_log_events('system-events', [message])
+        try:
+            message = f"[SYSTEM] {event} | {detail}"
+            self.put_log_events('system-events', [message])
+        except Exception:
+            pass
