@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>500 — Server Error | Stock Analysis Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 16px;
+      padding: 3rem 2.5rem;
+      max-width: 560px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      display: block;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .reason-box {
+      background: #23263a;
+      border: 1px solid #3a3f5c;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .reason-box p {
+      font-size: 0.875rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .reason-box strong {
+      color: #f59e0b;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.65rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
+
+    .btn-secondary {
+      background: #23263a;
+      color: #94a3b8;
+      border: 1px solid #3a3f5c;
+    }
+    .btn-secondary:hover { color: #e2e8f0; border-color: #6366f1; }
+
+    .error-code {
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="icon">⚡</span>
+    <h1>Something went wrong</h1>
+    <p class="subtitle">
+      The server encountered an unexpected error and could not complete your request.
+    </p>
+
+    <div class="reason-box">
+      <p>
+        <strong>Most likely cause:</strong> The AWS Academy lab session has expired.
+        Cloud services (DynamoDB, SNS, SQS) become temporarily unavailable when
+        lab credentials rotate. The app will recover automatically once the session
+        is refreshed or the lab is restarted.
+      </p>
+    </div>
+
+    <div class="actions">
+      <a href="/" class="btn btn-primary">⬅ Go to Dashboard</a>
+      <a href="javascript:location.reload()" class="btn btn-secondary">↺ Try Again</a>
+    </div>
+
+    <p class="error-code">HTTP 500 — Internal Server Error</p>
+  </div>
+</body>
+</html>

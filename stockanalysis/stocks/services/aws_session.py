@@ -47,7 +47,7 @@ def _using_explicit_credentials() -> bool:
 # 6 services initialised in the same request do not each pay a ~2s STS
 # round-trip. Cache is auto-invalidated when AWS_SESSION_TOKEN changes (env)
 # or when switching between IAM-role and explicit-credential mode.
-AWS_CACHE_TTL = 300  # 5 minutes
+AWS_CACHE_TTL = 60   # 1 minute — re-check quickly after lab session expires
 
 _aws_cache = {
     'result':     None,   # True | False | None (unset)

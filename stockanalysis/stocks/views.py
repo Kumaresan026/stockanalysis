@@ -173,48 +173,64 @@ def stock_detail(request, symbol):
     stock_data = api_service.get_stock_quote(symbol)
     history = api_service.get_stock_history(symbol, days=90)
 
-    # Step 2: Store in DynamoDB via service layer
-    dynamodb_service.store_stock_data(
-        symbol=symbol,
-        price=stock_data.get('price', 0),
-        volume=stock_data.get('volume', 0),
-        change_percent=stock_data.get('change_percent', 0),
-    )
-
-    # Step 3: Evaluate alerts directly (in-process, real-time, no Lambda dependency).
-    # This guarantees alerts fire even if Lambda is not deployed.
-    evaluate_and_notify(
-        symbol=symbol,
-        price=stock_data.get('price', 0),
-        volume=stock_data.get('volume', 0),
-        change_percent=stock_data.get('change_percent', 0),
-        dynamodb_service=dynamodb_service,
-        sns_service=sns_service,
-    )
-
-    # Step 4: Send STOCK_UPDATE to SQS to trigger Lambda pipeline.
-    # Flow: SQS message -> Lambda event source mapping -> stock_processor Lambda
-    #   -> DynamoDB (analytics) -> S3 (report) -> alert_handler Lambda -> SNS email
-    # This is fire-and-forget and does NOT block the web response.
-    sqs_sent = event_producer.send_stock_update(
-        symbol=symbol,
-        price=stock_data.get('price', 0),
-        volume=stock_data.get('volume', 0),
-        change_percent=stock_data.get('change_percent', 0),
-    )
-    if sqs_sent:
-        logger.info(f"[SQS] STOCK_UPDATE sent for {symbol} -> Lambda pipeline triggered")
-    else:
-        # SQS unavailable (e.g. expired credentials): fall back to direct Lambda invoke
-        logger.warning(f"[SQS] STOCK_UPDATE failed for {symbol} - falling back to direct Lambda invoke")
-        lambda_service.invoke_stock_processor(
+    # Step 2: Store in DynamoDB via service layer (best-effort — never crash the view)
+    try:
+        dynamodb_service.store_stock_data(
             symbol=symbol,
             price=stock_data.get('price', 0),
             volume=stock_data.get('volume', 0),
             change_percent=stock_data.get('change_percent', 0),
         )
-    # Log stock fetch to CloudWatch
-    cloudwatch_service.log_stock_fetch(symbol, stock_data.get('source', 'unknown'), True)
+    except Exception as e:
+        logger.warning(f"[DynamoDB] store_stock_data failed for {symbol}: {e}")
+
+    # Step 3: Evaluate alerts directly (in-process, real-time, no Lambda dependency).
+    # This guarantees alerts fire even if Lambda is not deployed.
+    try:
+        evaluate_and_notify(
+            symbol=symbol,
+            price=stock_data.get('price', 0),
+            volume=stock_data.get('volume', 0),
+            change_percent=stock_data.get('change_percent', 0),
+            dynamodb_service=dynamodb_service,
+            sns_service=sns_service,
+        )
+    except Exception as e:
+        logger.warning(f"[AlertEval] evaluate_and_notify failed for {symbol}: {e}")
+
+    # Step 4: Send STOCK_UPDATE to SQS to trigger Lambda pipeline.
+    # Flow: SQS message -> Lambda event source mapping -> stock_processor Lambda
+    #   -> DynamoDB (analytics) -> S3 (report) -> alert_handler Lambda -> SNS email
+    # This is fire-and-forget and does NOT block the web response.
+    try:
+        sqs_sent = event_producer.send_stock_update(
+            symbol=symbol,
+            price=stock_data.get('price', 0),
+            volume=stock_data.get('volume', 0),
+            change_percent=stock_data.get('change_percent', 0),
+        )
+        if sqs_sent:
+            logger.info(f"[SQS] STOCK_UPDATE sent for {symbol} -> Lambda pipeline triggered")
+        else:
+            # SQS unavailable (e.g. expired credentials): fall back to direct Lambda invoke
+            logger.warning(f"[SQS] STOCK_UPDATE failed for {symbol} - falling back to direct Lambda invoke")
+            try:
+                lambda_service.invoke_stock_processor(
+                    symbol=symbol,
+                    price=stock_data.get('price', 0),
+                    volume=stock_data.get('volume', 0),
+                    change_percent=stock_data.get('change_percent', 0),
+                )
+            except Exception as le:
+                logger.warning(f"[Lambda] invoke_stock_processor failed for {symbol}: {le}")
+    except Exception as e:
+        logger.warning(f"[SQS/Lambda] Stock update pipeline failed for {symbol}: {e}")
+
+    # Log stock fetch to CloudWatch (best-effort)
+    try:
+        cloudwatch_service.log_stock_fetch(symbol, stock_data.get('source', 'unknown'), True)
+    except Exception:
+        pass
 
     # Step 5: Compute analytics
     prices = [d['close'] for d in history] if history else []
@@ -266,12 +282,17 @@ def stock_search(request):
     """Search for stocks by symbol or name."""
     query = request.GET.get('query', '').strip()
     results = []
+    # Fresh instance on every request
+    _cw = _cloudwatch()
 
     if query:
         results = api_service.search_stocks(query)
-        cloudwatch_service.log_system_event(
-            'STOCK_SEARCH', f"Query: {query}, Results: {len(results)}"
-        )
+        try:
+            _cw.log_system_event(
+                'STOCK_SEARCH', f"Query: {query}, Results: {len(results)}"
+            )
+        except Exception:
+            pass
 
     context = {
         'query': query,
@@ -326,16 +347,20 @@ def add_to_watchlist(request, symbol):
         stock=stock_obj,
     )
 
-    # Store in DynamoDB
+    # Store in DynamoDB (best-effort — never crash the view)
     table_name = os.getenv('DYNAMODB_WATCHLIST_TABLE', 'user_watchlists')
-    dynamodb_service.put_item(
-        table_name,
-        {
-            'user_id': str(request.user.id),
-            'symbol': symbol,
-            'added_at': datetime.utcnow().isoformat(),
-        }
-    )
+    _db = _dynamodb()
+    try:
+        _db.put_item(
+            table_name,
+            {
+                'user_id': str(request.user.id),
+                'symbol': symbol,
+                'added_at': datetime.utcnow().isoformat(),
+            }
+        )
+    except Exception as e:
+        logger.warning(f"[DynamoDB] watchlist put_item failed for {symbol}: {e}")
 
     if created:
         messages.success(request, f'{symbol} added to your watchlist.')
@@ -508,24 +533,30 @@ def create_alert(request):
 
             # Send ALERT_CREATED event to SQS (triggers Lambda pipeline)
             # This completes the event-driven flow: Alert.create -> SQS -> Lambda -> DynamoDB/SNS
-            alert_sqs_sent = event_producer.send_alert_created(
-                alert_id=stable_alert_id,
-                user_id=str(request.user.id),
-                symbol=symbol,
-                condition=condition,
-                threshold=float(threshold),
-            )
-            if alert_sqs_sent:
-                logger.info(f"[SQS] ALERT_CREATED sent for {symbol} {condition}")
-            else:
-                # Fallback: direct Lambda invoke if SQS is unavailable
-                logger.warning(f"[SQS] ALERT_CREATED failed for {symbol} - falling back to direct Lambda invoke")
-                lambda_service.invoke_alert_handler(
+            try:
+                alert_sqs_sent = event_producer.send_alert_created(
+                    alert_id=stable_alert_id,
+                    user_id=str(request.user.id),
                     symbol=symbol,
-                    price=float(stock_data.get('price', 0)),
-                    volume=int(stock_data.get('volume', 0)),
-                    change_percent=float(stock_data.get('change_percent', 0)),
-            )
+                    condition=condition,
+                    threshold=float(threshold),
+                )
+                if alert_sqs_sent:
+                    logger.info(f"[SQS] ALERT_CREATED sent for {symbol} {condition}")
+                else:
+                    # Fallback: direct Lambda invoke if SQS is unavailable
+                    logger.warning(f"[SQS] ALERT_CREATED failed for {symbol} - falling back to direct Lambda invoke")
+                    try:
+                        lambda_service.invoke_alert_handler(
+                            symbol=symbol,
+                            price=float(stock_data.get('price', 0)),
+                            volume=int(stock_data.get('volume', 0)),
+                            change_percent=float(stock_data.get('change_percent', 0)),
+                        )
+                    except Exception as le:
+                        logger.warning(f"[Lambda] invoke_alert_handler failed for {symbol}: {le}")
+            except Exception as e:
+                logger.warning(f"[SQS/Lambda] Alert pipeline failed for {symbol}: {e}")
 
             # ── Send alert creation confirmation email ────────────────
             # Re-subscribe on every alert creation to handle the case where
@@ -627,16 +658,20 @@ def delete_alert(request, alert_id):
     alert = get_object_or_404(Alert, id=alert_id, user=request.user)
     symbol = alert.stock.symbol
 
-    # Remove from DynamoDB first (primary store)
-    if dynamodb_service.available:
+    # Remove from DynamoDB first (primary store) — fresh instance, best-effort
+    _db = _dynamodb()
+    if _db.available:
         table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
-        deleted = dynamodb_service.delete_item(table_name, {'alert_id': str(alert_id)})
-        if deleted:
-            logger.info(f"Alert {alert_id} deleted from DynamoDB.")
-        else:
-            logger.warning(f"Alert {alert_id} could not be deleted from DynamoDB.")
+        try:
+            deleted = _db.delete_item(table_name, {'alert_id': str(alert_id)})
+            if deleted:
+                logger.info(f"Alert {alert_id} deleted from DynamoDB.")
+            else:
+                logger.warning(f"Alert {alert_id} could not be deleted from DynamoDB.")
+        except Exception as e:
+            logger.warning(f"[DynamoDB] delete_alert failed for {alert_id}: {e}")
 
-    # Remove from SQLite
+    # Remove from SQLite (always succeeds regardless of AWS status)
     alert.delete()
     messages.success(request, f'Alert for {symbol} deleted.')
     return redirect('alerts')
@@ -664,12 +699,18 @@ def analytics_view(request):
     if prices:
         analytics = indicator_service.compute_indicators(symbol, prices)
 
-    # Store report in S3
+    # Store report in S3 (best-effort — never crash the view)
     if analytics:
-        s3_service.upload_json_report(analytics, symbol, 'analytics')
+        try:
+            s3_service.upload_json_report(analytics, symbol, 'analytics')
+        except Exception as e:
+            logger.warning(f"[S3] upload_json_report failed for {symbol}: {e}")
 
-    # Request further processing via SQS
-    event_producer.send_analytics_request(symbol, 'FULL')
+    # Request further processing via SQS (best-effort)
+    try:
+        event_producer.send_analytics_request(symbol, 'FULL')
+    except Exception as e:
+        logger.warning(f"[SQS] send_analytics_request failed for {symbol}: {e}")
 
     # Prepare chart data
     chart_labels = [d['date'] for d in history] if history else []
@@ -780,9 +821,12 @@ def login_view(request):
 def logout_view(request):
     """User logout."""
     cloudwatch_service = _cloudwatch()
-    cloudwatch_service.log_system_event(
-        'USER_LOGOUT', f"User: {request.user.username}"
-    )
+    try:
+        cloudwatch_service.log_system_event(
+            'USER_LOGOUT', f"User: {request.user.username}"
+        )
+    except Exception:
+        pass
     logout(request)
     messages.info(request, 'You have been logged out.')
     return redirect('dashboard')
@@ -835,3 +879,24 @@ def api_stock_history(request, symbol):
     days = int(request.GET.get('days', 90))
     history = api_service.get_stock_history(symbol.upper(), days)
     return JsonResponse({'symbol': symbol.upper(), 'history': history})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# CUSTOM ERROR HANDLERS
+# ═══════════════════════════════════════════════════════════════════════
+
+def custom_404(request, exception=None):
+    """Friendly 404 page."""
+    return render(request, '404.html', status=404)
+
+
+def custom_500(request):
+    """
+    Friendly 500 page.
+
+    Shown whenever an unhandled exception reaches Django's WSGI layer.
+    Most commonly triggered by expired AWS Academy credentials — the page
+    tells users to refresh the lab and try again.
+    """
+    return render(request, '500.html', status=500)
+
