@@ -199,25 +199,25 @@ class Command(BaseCommand):
             bucket = s3.bucket_name
             prefix  = f'analytics/{symbol}/'
             objects = s3.list_objects(prefix=prefix, max_keys=5)
-                if not objects:
-                    # Do a test upload directly to prove write access
-                    test_key     = f'diagnostics/test_pipeline_{run_id}.json'
-                    test_content = json.dumps({
-                        'test_run_id': run_id,
-                        'symbol':      symbol,
-                        'timestamp':   datetime.utcnow().isoformat(),
-                    }).encode()
-                    ok = s3.upload_file(test_content, test_key, 'application/json')
-                    if ok:
-                        pass_('S3 Upload Successful',
-                              f's3://{bucket}/{test_key} (direct test write)')
-                        s3.delete_object(test_key)
-                    else:
-                        fail_('S3 Upload', 'upload_file returned False')
-                else:
-                    newest = objects[-1]['key'] if objects else 'none'
+            if not objects:
+                # Do a test upload directly to prove write access
+                test_key     = f'diagnostics/test_pipeline_{run_id}.json'
+                test_content = json.dumps({
+                    'test_run_id': run_id,
+                    'symbol':      symbol,
+                    'timestamp':   datetime.utcnow().isoformat(),
+                }).encode()
+                ok = s3.upload_file(test_content, test_key, 'application/json')
+                if ok:
                     pass_('S3 Upload Successful',
-                          f"bucket={bucket} found {len(objects)} file(s) [{newest}]")
+                          f's3://{bucket}/{test_key} (direct test write)')
+                    s3.delete_object(test_key)
+                else:
+                    fail_('S3 Upload', 'upload_file returned False')
+            else:
+                newest = objects[-1]['key'] if objects else 'none'
+                pass_('S3 Upload Successful',
+                      f"bucket={bucket} found {len(objects)} file(s) [{newest}]")
         except Exception as e:
             fail_('S3 Upload', str(e))
 
