@@ -9,6 +9,7 @@ All views integrate with AWS services via the service layer.
 import json
 import logging
 import os
+import threading
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -39,32 +40,59 @@ from stocks.services.alert_evaluator import evaluate_and_notify
 from stocks.events.producer import StockEventProducer
 from stocks.analytics.indicators import StockIndicatorService
 from stocks.services.lambda_service import LambdaService
+from stocks.services.aws_session import check_aws_available
 
 logger = logging.getLogger('stocks')
 
-# Non-AWS services: safe to initialize once at startup (no credentials needed)
+# Non-AWS services — safe to initialize once at startup (no AWS credentials needed)
 api_service = StockAPIService()
 indicator_service = StockIndicatorService()
 
-# AWS services: created fresh per-request so rotated credentials are always
-# picked up without needing a server restart.
-def _sns():           return SNSService()
-def _dynamodb():      return DynamoDBService()
-def _s3():            return S3Service()
-def _sqs():           return SQSService()
-def _cloudwatch():    return CloudWatchService()
+# ── Per-request AWS service factories ────────────────────────────────────────
+# ALWAYS call these INSIDE view/function bodies — NEVER at module level.
+# Module-level instantiation triggers STS network calls at gunicorn startup,
+# which blocks worker boot and causes HTTP 500 errors when credentials expire.
+def _sns():            return SNSService()
+def _dynamodb():       return DynamoDBService()
+def _s3():             return S3Service()
+def _sqs():            return SQSService()
+def _cloudwatch():     return CloudWatchService()
 def _event_producer(): return StockEventProducer()
-def _lambda():        return LambdaService()
+def _lambda():         return LambdaService()
 
-# Keep module-level names for backward compatibility (views use these directly)
-# They are re-created on every request by calling the factory inside each view.
-sns_service        = _sns()
-dynamodb_service   = _dynamodb()
-s3_service         = _s3()
-sqs_service        = _sqs()
-cloudwatch_service = _cloudwatch()
-event_producer     = _event_producer()
-lambda_service     = _lambda()
+
+# ── Safe AWS execution helpers ────────────────────────────────────────────────
+
+def safe_aws_call(func, default=None):
+    """
+    Execute an AWS call, silently returning ``default`` on any exception.
+
+    Ensures that a failed or timed-out AWS call NEVER propagates to a Django
+    view and causes an HTTP 500 error.
+    """
+    try:
+        return func()
+    except Exception as exc:
+        logger.warning("[AWS] safe_aws_call suppressed %s: %s", type(exc).__name__, exc)
+        return default
+
+
+def fire_and_forget(func):
+    """
+    Run an AWS operation on a background daemon thread.
+
+    The HTTP response is returned to the user immediately.  The cloud write
+    (DynamoDB / SQS / SNS / CloudWatch) completes — or silently fails — in
+    the background without affecting response latency or raising exceptions.
+    """
+    def _worker():
+        try:
+            func()
+        except Exception as exc:
+            logger.warning(
+                "[AWS] background task suppressed %s: %s", type(exc).__name__, exc
+            )
+    threading.Thread(target=_worker, daemon=True).start()
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -77,7 +105,6 @@ def dashboard(request):
     dynamodb_service   = _dynamodb()
     sns_service        = _sns()
     cloudwatch_service = _cloudwatch()
-    from stocks.services.aws_session import check_aws_available
 
     # Fetch top movers
     movers = api_service.get_top_movers(count=6)
@@ -160,77 +187,48 @@ def stock_detail(request, symbol):
     4. Compute analytics
     """
     symbol = symbol.upper()
-    # Fresh instances on every request — picks up rotated AWS Academy credentials
-    dynamodb_service   = _dynamodb()
-    sns_service        = _sns()
-    sqs_service        = _sqs()
-    cloudwatch_service = _cloudwatch()
-    event_producer     = _event_producer()
-    lambda_service     = _lambda()
-    s3_service         = _s3()
 
-    # Step 1: Fetch real-time data
+    # Step 1: Fetch real-time data — synchronous (required for page render)
     stock_data = api_service.get_stock_quote(symbol)
-    history = api_service.get_stock_history(symbol, days=90)
+    history    = api_service.get_stock_history(symbol, days=90)
 
-    # Step 2: Store in DynamoDB via service layer (best-effort — never crash the view)
-    try:
-        dynamodb_service.store_stock_data(
-            symbol=symbol,
-            price=stock_data.get('price', 0),
-            volume=stock_data.get('volume', 0),
-            change_percent=stock_data.get('change_percent', 0),
+    # ── Background AWS writes ─────────────────────────────────────────────────
+    # All cloud writes run on daemon threads so they NEVER delay the HTTP response.
+    # Capture scalar values now; lambdas close over these locals (not the mutable
+    # stock_data dict) so values are stable when the thread executes.
+    _price   = stock_data.get('price', 0)
+    _volume  = stock_data.get('volume', 0)
+    _chg_pct = stock_data.get('change_percent', 0)
+    _source  = stock_data.get('source', 'unknown')
+
+    # Step 2: DynamoDB store — fire-and-forget
+    fire_and_forget(lambda: _dynamodb().store_stock_data(
+        symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct
+    ))
+
+    # Step 3: Alert evaluation — fire-and-forget (fresh service instances per thread)
+    fire_and_forget(lambda: evaluate_and_notify(
+        symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct,
+        dynamodb_service=_dynamodb(), sns_service=_sns(),
+    ))
+
+    # Step 4: SQS → Lambda pipeline — fire-and-forget
+    def _run_pipeline():
+        sqs_ok = safe_aws_call(
+            lambda: _event_producer().send_stock_update(
+                symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct
+            )
         )
-    except Exception as e:
-        logger.warning(f"[DynamoDB] store_stock_data failed for {symbol}: {e}")
+        if not sqs_ok:
+            # SQS unavailable — fall back to direct Lambda invoke
+            safe_aws_call(lambda: _lambda().invoke_stock_processor(
+                symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct
+            ))
 
-    # Step 3: Evaluate alerts directly (in-process, real-time, no Lambda dependency).
-    # This guarantees alerts fire even if Lambda is not deployed.
-    try:
-        evaluate_and_notify(
-            symbol=symbol,
-            price=stock_data.get('price', 0),
-            volume=stock_data.get('volume', 0),
-            change_percent=stock_data.get('change_percent', 0),
-            dynamodb_service=dynamodb_service,
-            sns_service=sns_service,
-        )
-    except Exception as e:
-        logger.warning(f"[AlertEval] evaluate_and_notify failed for {symbol}: {e}")
+    fire_and_forget(_run_pipeline)
 
-    # Step 4: Send STOCK_UPDATE to SQS to trigger Lambda pipeline.
-    # Flow: SQS message -> Lambda event source mapping -> stock_processor Lambda
-    #   -> DynamoDB (analytics) -> S3 (report) -> alert_handler Lambda -> SNS email
-    # This is fire-and-forget and does NOT block the web response.
-    try:
-        sqs_sent = event_producer.send_stock_update(
-            symbol=symbol,
-            price=stock_data.get('price', 0),
-            volume=stock_data.get('volume', 0),
-            change_percent=stock_data.get('change_percent', 0),
-        )
-        if sqs_sent:
-            logger.info(f"[SQS] STOCK_UPDATE sent for {symbol} -> Lambda pipeline triggered")
-        else:
-            # SQS unavailable (e.g. expired credentials): fall back to direct Lambda invoke
-            logger.warning(f"[SQS] STOCK_UPDATE failed for {symbol} - falling back to direct Lambda invoke")
-            try:
-                lambda_service.invoke_stock_processor(
-                    symbol=symbol,
-                    price=stock_data.get('price', 0),
-                    volume=stock_data.get('volume', 0),
-                    change_percent=stock_data.get('change_percent', 0),
-                )
-            except Exception as le:
-                logger.warning(f"[Lambda] invoke_stock_processor failed for {symbol}: {le}")
-    except Exception as e:
-        logger.warning(f"[SQS/Lambda] Stock update pipeline failed for {symbol}: {e}")
-
-    # Log stock fetch to CloudWatch (best-effort)
-    try:
-        cloudwatch_service.log_stock_fetch(symbol, stock_data.get('source', 'unknown'), True)
-    except Exception:
-        pass
+    # Step 5: CloudWatch log — fire-and-forget
+    fire_and_forget(lambda: _cloudwatch().log_stock_fetch(symbol, _source, True))
 
     # Step 5: Compute analytics
     prices = [d['close'] for d in history] if history else []
@@ -626,11 +624,11 @@ def create_alert(request):
                 )
 
             # Log to CloudWatch
-            cloudwatch_service.log_system_event(
+            safe_aws_call(lambda: cloudwatch_service.log_system_event(
                 'ALERT_CREATED',
                 f"User {request.user.username}: {symbol} {condition} {threshold} "
                 f"dynamo={'ok' if dynamo_ok else 'FAILED'}"
-            )
+            ))
 
             if sns_service.available and ok:
                 email_shown = notify_email or 'your registered email'
@@ -767,9 +765,9 @@ def register_view(request):
             login(request, user)
             messages.success(request, 'Account created successfully!')
 
-            cloudwatch_service.log_system_event(
+            safe_aws_call(lambda: cloudwatch_service.log_system_event(
                 'USER_REGISTERED', f"User: {user.username}"
-            )
+            ))
             return redirect('dashboard')
     else:
         form = UserRegistrationForm()
@@ -805,9 +803,9 @@ def login_view(request):
                 except Exception as e:
                     logger.warning(f"SNS re-subscribe failed for {user.email}: {e}")
 
-            cloudwatch_service.log_system_event(
+            safe_aws_call(lambda: cloudwatch_service.log_system_event(
                 'USER_LOGIN', f"User: {username}"
-            )
+            ))
             next_url = request.GET.get('next', 'dashboard')
             return redirect(next_url)
         else:

@@ -1,1 +1,1 @@
-web: gunicorn --workers 1 --threads 15 stock_platform.wsgi:application
+web: gunicorn --workers 1 --threads 15 --timeout 120 stock_platform.wsgi:application

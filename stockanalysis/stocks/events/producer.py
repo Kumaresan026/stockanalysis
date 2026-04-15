@@ -30,8 +30,20 @@ class StockEventProducer:
     ALERT_EVALUATION = 'ALERT_EVALUATION'
 
     def __init__(self):
-        self.sqs = SQSService()
-        self.cloudwatch = CloudWatchService()
+        # Intentionally empty — AWS service objects are created lazily inside each
+        # method so that constructing StockEventProducer() at import time or view
+        # entry does NOT trigger STS network calls.
+        pass
+
+    # ── Lazy service helpers ──────────────────────────────────────────────────────────
+
+    def _sqs(self):
+        """Return a fresh SQSService instance (created on demand, never at init)."""
+        return SQSService()
+
+    def _cw(self):
+        """Return a fresh CloudWatchService instance (created on demand)."""
+        return CloudWatchService()
 
     def send_stock_update(self, symbol: str, price: float,
                           volume: int = 0,
@@ -57,10 +69,10 @@ class StockEventProducer:
             'volume': volume,
             'change_percent': change_percent,
         }
-        success = self.sqs.send_message(self.STOCK_UPDATE, data)
+        success = self._sqs().send_message(self.STOCK_UPDATE, data)
 
         # Log to CloudWatch
-        self.cloudwatch.log_sqs_event(
+        self._cw().log_sqs_event(
             self.STOCK_UPDATE, symbol,
             f"Price: ${price:.2f}, Volume: {volume}"
         )
@@ -95,9 +107,9 @@ class StockEventProducer:
             'condition': condition,
             'threshold': threshold,
         }
-        success = self.sqs.send_message(self.ALERT_CREATED, data)
+        success = self._sqs().send_message(self.ALERT_CREATED, data)
 
-        self.cloudwatch.log_sqs_event(
+        self._cw().log_sqs_event(
             self.ALERT_CREATED, symbol,
             f"Alert: {condition} {threshold}"
         )
@@ -120,9 +132,9 @@ class StockEventProducer:
             'symbol': symbol.upper(),
             'analysis_type': analysis_type,
         }
-        success = self.sqs.send_message(self.ANALYTICS_REQUEST, data)
+        success = self._sqs().send_message(self.ANALYTICS_REQUEST, data)
 
-        self.cloudwatch.log_sqs_event(
+        self._cw().log_sqs_event(
             self.ANALYTICS_REQUEST, symbol,
             f"Analysis type: {analysis_type}"
         )
@@ -145,4 +157,4 @@ class StockEventProducer:
             'symbol': symbol.upper(),
             'price': price,
         }
-        return self.sqs.send_message(self.ALERT_EVALUATION, data)
+        return self._sqs().send_message(self.ALERT_EVALUATION, data)

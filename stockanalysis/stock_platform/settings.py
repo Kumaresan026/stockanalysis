@@ -7,8 +7,12 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load .env variables ONLY when they are not already set in the environment.
+# On Elastic Beanstalk, environment properties are injected into os.environ
+# before Python starts, so override=False ensures EB-managed values (including
+# REPLACE_IN_EB_CONSOLE IAM-role placeholders) always win over any stale
+# credentials that may be present in the committed .env file.
+load_dotenv(override=False)
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent

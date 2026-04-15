@@ -47,7 +47,10 @@ def _using_explicit_credentials() -> bool:
 # 6 services initialised in the same request do not each pay a ~2s STS
 # round-trip. Cache is auto-invalidated when AWS_SESSION_TOKEN changes (env)
 # or when switching between IAM-role and explicit-credential mode.
-AWS_CACHE_TTL = 60   # 1 minute — re-check quickly after lab session expires
+AWS_CACHE_TTL_OK   = 60   # seconds — re-check after 1 min when credentials are valid
+AWS_CACHE_TTL_FAIL = 5    # seconds — re-check quickly when credentials are invalid;
+                           #   this lets the app recover fast when a new lab session starts
+                           #   without requiring a gunicorn restart.
 
 _aws_cache = {
     'result':     None,   # True | False | None (unset)
@@ -155,7 +158,8 @@ def check_aws_available() -> bool:
 
     # Serve from cache if still fresh
     now = time.monotonic()
-    if _aws_cache['result'] is not None and (now - _aws_cache['checked_at']) < AWS_CACHE_TTL:
+    ttl = AWS_CACHE_TTL_OK if _aws_cache['result'] else AWS_CACHE_TTL_FAIL
+    if _aws_cache['result'] is not None and (now - _aws_cache['checked_at']) < ttl:
         return _aws_cache['result']
 
     # Cache miss — verify with a real STS call.
@@ -206,11 +210,12 @@ def check_aws_available() -> bool:
         )
 
     # Update cache
-    _aws_cache['result'] = result
+    _aws_cache['result']     = result
     _aws_cache['checked_at'] = now
-    _aws_cache['cache_key'] = cache_key
+    _aws_cache['cache_key']  = cache_key
+    ttl = AWS_CACHE_TTL_OK if result else AWS_CACHE_TTL_FAIL
     logger.debug(
-        f"[AWS] Credential cache updated: available={result}, ttl={AWS_CACHE_TTL}s, "
+        f"[AWS] Credential cache updated: available={result}, ttl={ttl}s, "
         f"mode={'explicit' if _using_explicit_credentials() else 'iam_role'}"
     )
     return result
