@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env.local
+
+# Django
+*.sqlite3
+db.sqlite3
+/stockanalysis/db.sqlite3
+/staticfiles/
+/media/
+
+# Environment variables (never commit real credentials)
+.env
+*.env
+
+# AWS / EB
+.elasticbeanstalk/
+*.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Zip / archive files (submission zips should NOT go in git)
+*.zip
+*.tar.gz
+*.rar
+
+# Local logs
+*.log
