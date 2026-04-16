@@ -1,9 +1,12 @@
 """
 Django views for the stocks app.
 
-Implements all user-facing views: dashboard, stock detail, search,
-watchlist, alerts, analytics, and authentication flows.
-All views integrate with AWS services via the service layer.
+Production-resilient implementation:
+- All AWS calls are fire-and-forget (daemon threads) — never delay HTTP response
+- All DB operations wrapped in try/except — graceful fallback on any failure
+- No CloudWatch in views — use Django logger only (CloudWatch removed per spec)
+- All Decimal conversions use _safe_decimal() — never crash on None/bad values
+- Every view returns a meaningful response even with AWS completely offline
 """
 
 import json
@@ -12,7 +15,7 @@ import os
 import threading
 import uuid
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
@@ -35,7 +38,6 @@ from stocks.services.dynamodb_service import DynamoDBService
 from stocks.services.s3_service import S3Service
 from stocks.services.sqs_service import SQSService
 from stocks.services.sns_service import SNSService
-from stocks.services.cloudwatch_service import CloudWatchService
 from stocks.services.alert_evaluator import evaluate_and_notify
 from stocks.events.producer import StockEventProducer
 from stocks.analytics.indicators import StockIndicatorService
@@ -43,19 +45,33 @@ from stocks.services.lambda_service import LambdaService
 
 logger = logging.getLogger('stocks')
 
-# Non-AWS services — safe to initialize once at startup (no AWS credentials needed)
-api_service = StockAPIService()
+# Non-AWS services — safe to initialize once at startup
+api_service       = StockAPIService()
 indicator_service = StockIndicatorService()
 
+
+# ── Decimal helper ────────────────────────────────────────────────────────────
+
+def _safe_decimal(value, default=0):
+    """
+    Safely convert any value to Decimal.
+    Returns Decimal(default) if value is None, empty, or unconvertible.
+    """
+    try:
+        if value is None:
+            return Decimal(str(default))
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal(str(default))
+
+
 # ── Per-request AWS service factories ────────────────────────────────────────
-# ALWAYS call these INSIDE view/function bodies — NEVER at module level.
-# Module-level instantiation triggers STS network calls at gunicorn startup,
-# which blocks worker boot and causes HTTP 500 errors when credentials expire.
+# ALWAYS call inside view/function bodies — NEVER at module level.
+
 def _sns():            return SNSService()
 def _dynamodb():       return DynamoDBService()
 def _s3():             return S3Service()
 def _sqs():            return SQSService()
-def _cloudwatch():     return CloudWatchService()
 def _event_producer(): return StockEventProducer()
 def _lambda():         return LambdaService()
 
@@ -65,9 +81,7 @@ def _lambda():         return LambdaService()
 def safe_aws_call(func, default=None):
     """
     Execute an AWS call, silently returning ``default`` on any exception.
-
-    Ensures that a failed or timed-out AWS call NEVER propagates to a Django
-    view and causes an HTTP 500 error.
+    Ensures AWS failures NEVER propagate to Django views as HTTP 500s.
     """
     try:
         return func()
@@ -79,18 +93,13 @@ def safe_aws_call(func, default=None):
 def fire_and_forget(func):
     """
     Run an AWS operation on a background daemon thread.
-
-    The HTTP response is returned to the user immediately.  The cloud write
-    (DynamoDB / SQS / SNS / CloudWatch) completes — or silently fails — in
-    the background without affecting response latency or raising exceptions.
+    HTTP response is returned immediately; cloud write completes (or fails) silently.
     """
     def _worker():
         try:
             func()
         except Exception as exc:
-            logger.warning(
-                "[AWS] background task suppressed %s: %s", type(exc).__name__, exc
-            )
+            logger.warning("[AWS] background task suppressed %s: %s", type(exc).__name__, exc)
     threading.Thread(target=_worker, daemon=True).start()
 
 
@@ -100,52 +109,40 @@ def fire_and_forget(func):
 
 def dashboard(request):
     """Main dashboard — market overview with top gainers/losers."""
-    # Fresh instances on every request — picks up rotated AWS Academy credentials
-    dynamodb_service   = _dynamodb()
-    sns_service        = _sns()
-    cloudwatch_service = _cloudwatch()
+    dynamodb_service = _dynamodb()
+    sns_service      = _sns()
 
     # Fetch top movers
-    movers = api_service.get_top_movers(count=6)
+    movers  = api_service.get_top_movers(count=6)
     gainers = movers.get('gainers', [])
-    losers = movers.get('losers', [])
+    losers  = movers.get('losers', [])
 
     # Fallback: if no API key, fetch known symbols directly for display
     if not gainers and not losers:
-        popular = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'NFLX']
+        popular    = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'NFLX']
         all_quotes = [api_service.get_stock_quote(sym) for sym in popular]
-        gainers = [q for q in all_quotes if q.get('change_percent', 0) >= 0][:4]
-        losers  = [q for q in all_quotes if q.get('change_percent', 0) < 0][:4]
-        # If all are positive (demo data uses static values), split the list
+        gainers    = [q for q in all_quotes if q.get('change_percent', 0) >= 0][:4]
+        losers     = [q for q in all_quotes if q.get('change_percent', 0) < 0][:4]
         if not losers:
             gainers, losers = all_quotes[:4], all_quotes[4:]
-
-    # Log dashboard access to CloudWatch (best-effort — never crash the view)
-    try:
-        cloudwatch_service.log_system_event(
-            'DASHBOARD_ACCESS',
-            f"User: {request.user.username if request.user.is_authenticated else 'anonymous'}"
-        )
-    except Exception:
-        pass
 
     # Get user's watchlist if authenticated
     watchlist_stocks = []
     if request.user.is_authenticated:
         try:
-            watchlist_entries = Watchlist.objects.filter(user=request.user).select_related('stock')[:5]
+            watchlist_entries = Watchlist.objects.filter(
+                user=request.user
+            ).select_related('stock')[:5]
             for entry in watchlist_entries:
                 data = api_service.get_stock_quote(entry.stock.symbol)
                 watchlist_stocks.append(data)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("[Dashboard] watchlist fetch failed: %s", e)
 
-    # Evaluate alerts for all stocks shown on the dashboard.
-    # Wrapped in try/except — alert evaluation MUST NOT crash the page.
+    # Evaluate alerts — best-effort, never crash
     try:
-        all_dashboard_stocks = gainers + losers + watchlist_stocks
         seen_symbols = set()
-        for stock_data in all_dashboard_stocks:
+        for stock_data in gainers + losers + watchlist_stocks:
             sym = stock_data.get('symbol', '')
             if sym and sym not in seen_symbols:
                 seen_symbols.add(sym)
@@ -157,17 +154,16 @@ def dashboard(request):
                     dynamodb_service=dynamodb_service,
                     sns_service=sns_service,
                 )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[Dashboard] alert evaluation failed: %s", e)
 
     context = {
-        'gainers': gainers,
-        'losers': losers,
+        'gainers':          gainers,
+        'losers':           losers,
         'watchlist_stocks': watchlist_stocks,
-        'search_form': StockSearchForm(),
+        'search_form':      StockSearchForm(),
     }
     return render(request, 'stocks/dashboard.html', context)
-
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -177,122 +173,109 @@ def dashboard(request):
 def stock_detail(request, symbol):
     """
     Stock detail page — price, volume, historical chart, analytics.
-
-    Workflow:
-    1. Fetch stock data from API
-    2. Store in DynamoDB
-    3. Send event to SQS
-    4. Compute analytics
+    All AWS writes are fire-and-forget. All DB ops are wrapped in try/except.
+    This view NEVER returns 500.
     """
-    symbol = symbol.upper()
-
-    # Step 1: Fetch real-time data — synchronous (required for page render)
+    symbol     = symbol.upper()
     stock_data = api_service.get_stock_quote(symbol)
     history    = api_service.get_stock_history(symbol, days=90)
 
-    # ── Background AWS writes ─────────────────────────────────────────────────
-    # All cloud writes run on daemon threads so they NEVER delay the HTTP response.
-    # Capture scalar values now; lambdas close over these locals (not the mutable
-    # stock_data dict) so values are stable when the thread executes.
-    _price   = stock_data.get('price', 0)
-    _volume  = stock_data.get('volume', 0)
-    _chg_pct = stock_data.get('change_percent', 0)
-    _source  = stock_data.get('source', 'unknown')
+    # Scalar captures for thread-safe lambdas
+    _price   = float(stock_data.get('price') or 0)
+    _volume  = int(stock_data.get('volume') or 0)
+    _chg_pct = float(stock_data.get('change_percent') or 0)
 
-    # Step 2: DynamoDB store — fire-and-forget
+    # Background AWS fire-and-forget writes
     fire_and_forget(lambda: _dynamodb().store_stock_data(
         symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct
     ))
-
-    # Step 3: Alert evaluation — fire-and-forget (fresh service instances per thread)
     fire_and_forget(lambda: evaluate_and_notify(
         symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct,
         dynamodb_service=_dynamodb(), sns_service=_sns(),
     ))
-
-    # Step 4: SQS → Lambda pipeline — fire-and-forget
-    def _run_pipeline():
-        sqs_ok = safe_aws_call(
-            lambda: _event_producer().send_stock_update(
-                symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct
-            )
+    fire_and_forget(lambda: safe_aws_call(
+        lambda: _event_producer().send_stock_update(
+            symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct
         )
-        if not sqs_ok:
-            # SQS unavailable — fall back to direct Lambda invoke
-            safe_aws_call(lambda: _lambda().invoke_stock_processor(
-                symbol=symbol, price=_price, volume=_volume, change_percent=_chg_pct
-            ))
+    ))
 
-    fire_and_forget(_run_pipeline)
-
-    # Step 5: CloudWatch log — fire-and-forget
-    fire_and_forget(lambda: _cloudwatch().log_stock_fetch(symbol, _source, True))
-
-    # Step 5: Compute analytics
-    prices = [d['close'] for d in history] if history else []
+    # Compute analytics (pure Python — no AWS)
+    prices    = [d['close'] for d in history] if history else []
     analytics = {}
     if prices:
-        analytics = indicator_service.compute_indicators(symbol, prices)
+        try:
+            analytics = indicator_service.compute_indicators(symbol, prices)
+        except Exception as e:
+            logger.warning("[Analytics] compute_indicators failed for %s: %s", symbol, e)
 
-    # Update or create Django model
-    stock_obj, _ = Stock.objects.update_or_create(
-        symbol=symbol,
-        defaults={
-            'name': stock_data.get('name', symbol),
-            'current_price': Decimal(str(stock_data.get('price', 0))),
-            'previous_close': Decimal(str(stock_data.get('previous_close', 0))),
-            'volume': stock_data.get('volume', 0),
-            'change_percent': Decimal(str(stock_data.get('change_percent', 0))),
-            'last_updated': timezone.now(),
-        }
-    )
+    # Update / create Django model — wrapped so Decimal errors don't 500
+    stock_obj = None
+    try:
+        stock_obj, _ = Stock.objects.update_or_create(
+            symbol=symbol,
+            defaults={
+                'name':           stock_data.get('name', symbol),
+                'current_price':  _safe_decimal(stock_data.get('price'), 0),
+                'previous_close': _safe_decimal(stock_data.get('previous_close'), 0),
+                'volume':         _volume,
+                'change_percent': _safe_decimal(stock_data.get('change_percent'), 0),
+                'last_updated':   timezone.now(),
+            }
+        )
+    except Exception as e:
+        logger.warning("[DB] update_or_create Stock failed for %s: %s", symbol, e)
+        # Fallback: get existing or build minimal in-memory stub
+        try:
+            stock_obj = Stock.objects.get(symbol=symbol)
+        except Stock.DoesNotExist:
+            stock_obj = Stock(symbol=symbol, name=stock_data.get('name', symbol),
+                              current_price=_safe_decimal(stock_data.get('price'), 0))
+        except Exception:
+            stock_obj = Stock(symbol=symbol, name=symbol, current_price=Decimal('0'))
 
-    # Check if user has it in watchlist
+    # Check watchlist membership
     in_watchlist = False
-    if request.user.is_authenticated:
-        in_watchlist = Watchlist.objects.filter(
-            user=request.user, stock=stock_obj
-        ).exists()
+    if request.user.is_authenticated and stock_obj and stock_obj.pk:
+        try:
+            in_watchlist = Watchlist.objects.filter(
+                user=request.user, stock=stock_obj
+            ).exists()
+        except Exception as e:
+            logger.warning("[DB] watchlist check failed: %s", e)
 
-    # Prepare chart data
-    chart_labels = [d['date'] for d in history] if history else []
-    chart_prices = [d['close'] for d in history] if history else []
+    chart_labels  = [d['date']   for d in history] if history else []
+    chart_prices  = [d['close']  for d in history] if history else []
     chart_volumes = [d['volume'] for d in history] if history else []
 
     context = {
-        'stock': stock_data,
-        'stock_obj': stock_obj,
-        'history': history,
-        'analytics': analytics,
+        'stock':        stock_data,
+        'stock_obj':    stock_obj,
+        'history':      history,
+        'analytics':    analytics,
         'in_watchlist': in_watchlist,
-        'chart_labels': json.dumps(chart_labels),
-        'chart_prices': json.dumps(chart_prices),
+        'chart_labels':  json.dumps(chart_labels),
+        'chart_prices':  json.dumps(chart_prices),
         'chart_volumes': json.dumps(chart_volumes),
-        'indicators': analytics.get('indicators', {}),
-        'signals': analytics.get('signals', {}),
+        'indicators':    analytics.get('indicators', {}),
+        'signals':       analytics.get('signals', {}),
     }
     return render(request, 'stocks/stock_detail.html', context)
 
 
 def stock_search(request):
     """Search for stocks by symbol or name."""
-    query = request.GET.get('query', '').strip()
+    query   = request.GET.get('query', '').strip()
     results = []
-    # Fresh instance on every request
-    _cw = _cloudwatch()
 
     if query:
-        results = api_service.search_stocks(query)
         try:
-            _cw.log_system_event(
-                'STOCK_SEARCH', f"Query: {query}, Results: {len(results)}"
-            )
-        except Exception:
-            pass
+            results = api_service.search_stocks(query)
+        except Exception as e:
+            logger.warning("[Search] search_stocks failed for '%s': %s", query, e)
 
     context = {
-        'query': query,
-        'results': results,
+        'query':       query,
+        'results':     results,
         'search_form': StockSearchForm(initial={'query': query}),
     }
     return render(request, 'stocks/stock_search.html', context)
@@ -305,19 +288,21 @@ def stock_search(request):
 @login_required
 def watchlist_view(request):
     """Display user's watchlist with live prices."""
-    entries = Watchlist.objects.filter(user=request.user).select_related('stock')
     watchlist_data = []
-
-    for entry in entries:
-        quote = api_service.get_stock_quote(entry.stock.symbol)
-        watchlist_data.append({
-            'entry': entry,
-            'quote': quote,
-        })
+    try:
+        entries = Watchlist.objects.filter(user=request.user).select_related('stock')
+        for entry in entries:
+            try:
+                quote = api_service.get_stock_quote(entry.stock.symbol)
+            except Exception:
+                quote = {'symbol': entry.stock.symbol, 'price': 0}
+            watchlist_data.append({'entry': entry, 'quote': quote})
+    except Exception as e:
+        logger.warning("[Watchlist] fetch failed: %s", e)
 
     context = {
         'watchlist_data': watchlist_data,
-        'form': WatchlistForm(),
+        'form':           WatchlistForm(),
     }
     return render(request, 'stocks/watchlist.html', context)
 
@@ -325,44 +310,36 @@ def watchlist_view(request):
 @login_required
 def add_to_watchlist(request, symbol):
     """Add a stock to the user's watchlist."""
-    symbol = symbol.upper()
-
-    # Get or create the stock object
+    symbol     = symbol.upper()
     stock_data = api_service.get_stock_quote(symbol)
-    stock_obj, _ = Stock.objects.get_or_create(
-        symbol=symbol,
-        defaults={
-            'name': stock_data.get('name', symbol),
-            'current_price': Decimal(str(stock_data.get('price', 0))),
-        }
-    )
 
-    # Add to watchlist
-    _, created = Watchlist.objects.get_or_create(
-        user=request.user,
-        stock=stock_obj,
-    )
-
-    # Store in DynamoDB (best-effort — never crash the view)
-    table_name = os.getenv('DYNAMODB_WATCHLIST_TABLE', 'user_watchlists')
-    _db = _dynamodb()
     try:
-        _db.put_item(
-            table_name,
-            {
-                'user_id': str(request.user.id),
-                'symbol': symbol,
-                'added_at': datetime.utcnow().isoformat(),
+        stock_obj, _ = Stock.objects.get_or_create(
+            symbol=symbol,
+            defaults={
+                'name':          stock_data.get('name', symbol),
+                'current_price': _safe_decimal(stock_data.get('price'), 0),
             }
         )
+        _, created = Watchlist.objects.get_or_create(
+            user=request.user, stock=stock_obj,
+        )
     except Exception as e:
-        logger.warning(f"[DynamoDB] watchlist put_item failed for {symbol}: {e}")
+        logger.warning("[Watchlist] add_to_watchlist DB failed for %s: %s", symbol, e)
+        messages.error(request, f'Could not add {symbol} to watchlist. Please try again.')
+        return redirect('stock_detail', symbol=symbol)
+
+    # DynamoDB best-effort
+    fire_and_forget(lambda: _dynamodb().put_item(
+        os.getenv('DYNAMODB_WATCHLIST_TABLE', 'user_watchlists'),
+        {'user_id': str(request.user.id), 'symbol': symbol,
+         'added_at': datetime.utcnow().isoformat()}
+    ))
 
     if created:
         messages.success(request, f'{symbol} added to your watchlist.')
     else:
         messages.info(request, f'{symbol} is already in your watchlist.')
-
     return redirect('stock_detail', symbol=symbol)
 
 
@@ -370,10 +347,12 @@ def add_to_watchlist(request, symbol):
 def remove_from_watchlist(request, symbol):
     """Remove a stock from the user's watchlist."""
     symbol = symbol.upper()
-    Watchlist.objects.filter(
-        user=request.user, stock__symbol=symbol
-    ).delete()
-    messages.success(request, f'{symbol} removed from your watchlist.')
+    try:
+        Watchlist.objects.filter(user=request.user, stock__symbol=symbol).delete()
+        messages.success(request, f'{symbol} removed from your watchlist.')
+    except Exception as e:
+        logger.warning("[Watchlist] remove failed for %s: %s", symbol, e)
+        messages.error(request, 'Could not remove from watchlist.')
     return redirect('watchlist')
 
 
@@ -385,36 +364,31 @@ def remove_from_watchlist(request, symbol):
 def alerts_view(request):
     """
     Display user's alerts.
-
-    Storage hierarchy:
-    - Primary: DynamoDB (persists across EB deployments, scaling, and restarts)
-    - Fallback: SQLite (local dev or when DynamoDB is unavailable)
-
-    On every load, DynamoDB alerts are re-synced into SQLite so the page
-    renders correctly even when DynamoDB has records the current instance lacks.
+    Primary store: DynamoDB. Fallback: SQLite.
+    Gracefully degrades if DynamoDB is unavailable.
     """
-    user_id = str(request.user.id)
-    # Fresh instances on every request
+    user_id          = str(request.user.id)
     dynamodb_service = _dynamodb()
 
-    # Try DynamoDB — returns [] if unavailable or on any error
+    # Try DynamoDB — returns [] on any error
     dynamo_alerts = []
     try:
         dynamo_alerts = dynamodb_service.get_user_alerts(
-            user_id,
-            status='active',
-            username=request.user.username,
+            user_id, status='active', username=request.user.username,
         )
     except Exception as e:
-        logger.warning(f"Could not fetch alerts from DynamoDB: {e}")
+        logger.warning("[Alerts] DynamoDB fetch failed: %s", e)
 
-    # Also get SQLite alerts for display
-    sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
-    sqlite_alert_ids = {str(a.id) for a in sqlite_alerts}
-    dynamo_alert_ids = {item.get('alert_id', '') for item in dynamo_alerts}
+    # SQLite alerts
+    sqlite_alerts    = []
+    sqlite_alert_ids = set()
+    try:
+        sqlite_alerts    = list(Alert.objects.filter(user=request.user).select_related('stock'))
+        sqlite_alert_ids = {str(a.id) for a in sqlite_alerts}
+    except Exception as e:
+        logger.warning("[Alerts] SQLite fetch failed: %s", e)
 
-    # Re-sync: bring any DynamoDB alerts not in SQLite back into SQLite
-    # This handles: EB restarts, fresh deploys, or DynamoDB-only saves
+    # Re-sync DynamoDB → SQLite (best-effort)
     newly_synced = 0
     for item in dynamo_alerts:
         item_alert_id = item.get('alert_id', '')
@@ -424,149 +398,130 @@ def alerts_view(request):
                     symbol=item.get('symbol', ''),
                     defaults={'name': item.get('symbol', ''), 'current_price': 0},
                 )
-                new_alert, created = Alert.objects.get_or_create(
+                _, created = Alert.objects.get_or_create(
                     user=request.user,
                     stock=stock_obj,
                     condition=item.get('condition', ''),
                     defaults={
                         'threshold': item.get('threshold', 0),
-                        'status': item.get('status', 'active'),
+                        'status':    item.get('status', 'active'),
                     },
                 )
                 if created:
                     newly_synced += 1
             except Exception as e:
-                logger.warning(f"Could not re-sync alert '{item_alert_id}' from DynamoDB: {e}")
+                logger.warning("[Alerts] sync failed for '%s': %s", item_alert_id, e)
 
     if newly_synced:
-        logger.info(f"Re-synced {newly_synced} alert(s) from DynamoDB into SQLite for user '{request.user.username}'")
-        sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
+        try:
+            sqlite_alerts = list(Alert.objects.filter(user=request.user).select_related('stock'))
+        except Exception:
+            pass
 
     context = {
-        'alerts': sqlite_alerts,
+        'alerts':        sqlite_alerts,
         'dynamo_alerts': dynamo_alerts,
     }
     return render(request, 'stocks/alerts.html', context)
 
 
-
 @login_required
 def create_alert(request):
-    """Create a new stock alert.
-
-    Storage strategy:
-    - Primary: DynamoDB (persists across EB deployments and scaling events)
-    - Fallback: SQLite (used only when DynamoDB is unavailable, i.e. local dev)
     """
-    # Fresh AWS service instances — credentials checked on every alert creation
-    dynamodb_service   = _dynamodb()
-    sns_service        = _sns()
-    cloudwatch_service = _cloudwatch()
-    event_producer     = _event_producer()
-    lambda_service     = _lambda()
+    Create a new stock alert.
+    Primary store: DynamoDB. Fallback: SQLite.
+    """
+    dynamodb_service = _dynamodb()
+    sns_service      = _sns()
 
     if request.method == 'POST':
         form = AlertForm(request.POST)
         if form.is_valid():
-            symbol = form.cleaned_data['symbol'].upper()
+            symbol    = form.cleaned_data['symbol'].upper()
             condition = form.cleaned_data['condition']
             threshold = form.cleaned_data['threshold']
 
             # Get or create stock
             stock_data = api_service.get_stock_quote(symbol)
-            stock_obj, _ = Stock.objects.get_or_create(
-                symbol=symbol,
-                defaults={
-                    'name': stock_data.get('name', symbol),
-                    'current_price': Decimal(str(stock_data.get('price', 0))),
-                }
-            )
-
-            # ── Idempotency: prevent duplicate alerts ─────────────────────
-            existing = Alert.objects.filter(
-                user=request.user,
-                stock=stock_obj,
-                condition=condition,
-                threshold=threshold,
-                status='active',
-            ).first()
-            if existing:
-                messages.info(
-                    request,
-                    f'You already have an active alert for {symbol} {condition} '
-                    f'${float(threshold):.2f}. Duplicate not created.'
+            try:
+                stock_obj, _ = Stock.objects.get_or_create(
+                    symbol=symbol,
+                    defaults={
+                        'name':          stock_data.get('name', symbol),
+                        'current_price': _safe_decimal(stock_data.get('price'), 0),
+                    }
                 )
-                return redirect('alerts')
+            except Exception as e:
+                logger.warning("[CreateAlert] Stock get_or_create failed: %s", e)
+                messages.error(request, 'Could not create alert. Please try again.')
+                return render(request, 'stocks/create_alert.html', {'form': form})
 
-            # Always create Django model record (needed for page rendering)
-            alert = Alert.objects.create(
-                user=request.user,
-                stock=stock_obj,
-                condition=condition,
-                threshold=threshold,
-            )
+            # Idempotency check
+            try:
+                existing = Alert.objects.filter(
+                    user=request.user, stock=stock_obj,
+                    condition=condition, threshold=threshold, status='active',
+                ).first()
+                if existing:
+                    messages.info(
+                        request,
+                        f'You already have an active alert for {symbol} {condition} '
+                        f'${float(threshold):.2f}.'
+                    )
+                    return redirect('alerts')
+            except Exception as e:
+                logger.warning("[CreateAlert] idempotency check failed: %s", e)
 
-            # Use a UUID as the stable DynamoDB key — NOT the SQLite auto-increment id.
-            # SQLite ids reset after every EB redeploy; UUIDs are permanent.
+            # Create SQLite record
+            try:
+                alert = Alert.objects.create(
+                    user=request.user, stock=stock_obj,
+                    condition=condition, threshold=threshold,
+                )
+            except Exception as e:
+                logger.warning("[CreateAlert] SQLite create failed: %s", e)
+                messages.error(request, 'Could not save alert. Please try again.')
+                return render(request, 'stocks/create_alert.html', {'form': form})
+
             stable_alert_id = str(uuid.uuid4())
 
-            # Primary persistent store: DynamoDB (survives EB redeployments)
-            dynamo_ok = dynamodb_service.store_alert_rule(
-                alert_id=stable_alert_id,
-                user_id=str(request.user.id),
-                username=request.user.username,   # fallback for post-restart recovery
-                symbol=symbol,
-                condition=condition,
-                threshold=float(threshold),
-            )
-            if not dynamo_ok:
-                logger.warning(
-                    f"Alert for {symbol} could not be saved to DynamoDB. "
-                    "Only SQLite copy exists — it will be lost on next EB deploy."
-                )
-
-            # Send ALERT_CREATED event to SQS (triggers Lambda pipeline)
-            # This completes the event-driven flow: Alert.create -> SQS -> Lambda -> DynamoDB/SNS
-            try:
-                alert_sqs_sent = event_producer.send_alert_created(
+            # DynamoDB primary store (best-effort)
+            dynamo_ok = safe_aws_call(
+                lambda: dynamodb_service.store_alert_rule(
                     alert_id=stable_alert_id,
                     user_id=str(request.user.id),
+                    username=request.user.username,
                     symbol=symbol,
                     condition=condition,
                     threshold=float(threshold),
-                )
-                if alert_sqs_sent:
-                    logger.info(f"[SQS] ALERT_CREATED sent for {symbol} {condition}")
-                else:
-                    # Fallback: direct Lambda invoke if SQS is unavailable
-                    logger.warning(f"[SQS] ALERT_CREATED failed for {symbol} - falling back to direct Lambda invoke")
-                    try:
-                        lambda_service.invoke_alert_handler(
-                            symbol=symbol,
-                            price=float(stock_data.get('price', 0)),
-                            volume=int(stock_data.get('volume', 0)),
-                            change_percent=float(stock_data.get('change_percent', 0)),
-                        )
-                    except Exception as le:
-                        logger.warning(f"[Lambda] invoke_alert_handler failed for {symbol}: {le}")
-            except Exception as e:
-                logger.warning(f"[SQS/Lambda] Alert pipeline failed for {symbol}: {e}")
+                ),
+                default=False
+            )
+            if not dynamo_ok:
+                logger.warning("[CreateAlert] DynamoDB store failed for %s — SQLite only.", symbol)
 
-            # ── Send alert creation confirmation email ────────────────
-            current_price  = float(stock_data.get('price', 0))
+            # SQS pipeline (fire-and-forget)
+            _price   = float(stock_data.get('price') or 0)
+            _volume  = int(stock_data.get('volume') or 0)
+            _chg_pct = float(stock_data.get('change_percent') or 0)
+
+            fire_and_forget(lambda: safe_aws_call(
+                lambda: _event_producer().send_alert_created(
+                    alert_id=stable_alert_id,
+                    user_id=str(request.user.id),
+                    symbol=symbol, condition=condition,
+                    threshold=float(threshold),
+                )
+            ))
+
+            # SNS confirmation email (best-effort)
             user_email     = request.user.email
             fallback_email = os.getenv('SNS_ALERT_EMAIL', '')
             notify_email   = user_email or fallback_email
 
-            # Subscribe user email (idempotent — safe to call every time)
-            subscribe_target = user_email or fallback_email
-            if subscribe_target:
-                try:
-                    sns_service.subscribe(subscribe_target)
-                except Exception:
-                    pass
+            if notify_email:
+                safe_aws_call(lambda: sns_service.subscribe(notify_email))
 
-            # Human-readable condition explanation
             condition_map = {
                 'PRICE_ABOVE':  f'rises ABOVE ${float(threshold):.2f}',
                 'PRICE_BELOW':  f'falls BELOW ${float(threshold):.2f}',
@@ -576,87 +531,68 @@ def create_alert(request):
             }
             condition_text = condition_map.get(condition, f'{condition} {threshold}')
 
-            confirmation_subject = (
-                f"Alert Set: {symbol} {condition.replace('_', ' ').title()}"
-                f" ${float(threshold):.2f}"
-            )
-            confirmation_message = (
-                f"Hi {request.user.username},\n\n"
-                f"Your stock alert has been set successfully.\n"
-                f"{'=' * 50}\n\n"
-                f"  Stock     : {symbol} ({stock_data.get('name', symbol)})\n"
-                f"  Condition : {condition.replace('_', ' ')}\n"
-                f"  Threshold : ${float(threshold):.2f}\n"
-                f"  Current   : ${current_price:.2f}\n\n"
-                f"  You will receive an email when {symbol} {condition_text}.\n\n"
-                f"{'=' * 50}\n"
-                f"Manage your alerts: https://{request.get_host()}/alerts/\n\n"
-                f"-- Cloud Stock Market Analysis Platform"
+            email_ok = safe_aws_call(
+                lambda: sns_service.publish(
+                    subject=f"Alert Set: {symbol} {condition.replace('_', ' ').title()} ${float(threshold):.2f}",
+                    message=(
+                        f"Hi {request.user.username},\n\n"
+                        f"Your stock alert has been set successfully.\n"
+                        f"{'=' * 50}\n\n"
+                        f"  Stock     : {symbol} ({stock_data.get('name', symbol)})\n"
+                        f"  Condition : {condition.replace('_', ' ')}\n"
+                        f"  Threshold : ${float(threshold):.2f}\n"
+                        f"  Current   : ${_price:.2f}\n\n"
+                        f"  You will be alerted when {symbol} {condition_text}.\n\n"
+                        f"{'=' * 50}\n"
+                        f"Manage your alerts: https://{request.get_host()}/alerts/\n\n"
+                        f"-- Cloud Stock Market Analysis Platform"
+                    ),
+                ),
+                default=False
             )
 
-            ok = sns_service.publish(
-                subject=confirmation_subject,
-                message=confirmation_message,
-            )
-            if ok:
-                logger.info(
-                    f"Alert confirmation published via SNS — "
-                    f"symbol={symbol} condition={condition} email={notify_email}"
-                )
-            else:
-                logger.warning(
-                    f"SNS publish failed for {symbol} {condition} — "
-                    f"alert saved, email notification skipped."
-                )
-
-            # Log to CloudWatch
-            safe_aws_call(lambda: cloudwatch_service.log_system_event(
-                'ALERT_CREATED',
-                f"User {request.user.username}: {symbol} {condition} {threshold} "
-                f"dynamo={'ok' if dynamo_ok else 'FAILED'}"
-            ))
-
-            if ok:
-                email_shown = notify_email or 'your registered email'
+            if email_ok:
                 messages.success(
                     request,
-                    f'✅ Alert created for {symbol}. Confirmation email sent to {email_shown}.'
+                    f'✅ Alert created for {symbol}. Confirmation email sent to {notify_email or "your email"}.'
                 )
             else:
                 messages.success(
                     request,
                     f'✅ Alert created for {symbol}. '
-                    f'Email notification will be sent when the condition is met.'
+                    f'You will be notified when the condition is met.'
                 )
             return redirect('alerts')
     else:
         form = AlertForm()
 
-    context = {'form': form}
-    return render(request, 'stocks/create_alert.html', context)
+    return render(request, 'stocks/create_alert.html', {'form': form})
 
 
 @login_required
 def delete_alert(request, alert_id):
     """Delete a stock alert from both SQLite and DynamoDB."""
-    alert = get_object_or_404(Alert, id=alert_id, user=request.user)
-    symbol = alert.stock.symbol
-
-    # Remove from DynamoDB first (primary store) — best-effort
-    _db = _dynamodb()
-    table_name = os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules')
     try:
-        deleted = _db.delete_item(table_name, {'alert_id': str(alert_id)})
-        if deleted:
-            logger.info(f"Alert {alert_id} deleted from DynamoDB.")
-        else:
-            logger.warning(f"Alert {alert_id} could not be deleted from DynamoDB.")
+        alert  = get_object_or_404(Alert, id=alert_id, user=request.user)
+        symbol = alert.stock.symbol
     except Exception as e:
-        logger.warning(f"[DynamoDB] delete_alert failed for {alert_id}: {e}")
+        logger.warning("[DeleteAlert] get_object_or_404 failed: %s", e)
+        return redirect('alerts')
 
-    # Remove from SQLite (always succeeds regardless of AWS status)
-    alert.delete()
-    messages.success(request, f'Alert for {symbol} deleted.')
+    # DynamoDB delete (best-effort)
+    fire_and_forget(lambda: _dynamodb().delete_item(
+        os.getenv('DYNAMODB_ALERTS_TABLE', 'alert_rules'),
+        {'alert_id': str(alert_id)}
+    ))
+
+    # SQLite delete
+    try:
+        alert.delete()
+        messages.success(request, f'Alert for {symbol} deleted.')
+    except Exception as e:
+        logger.warning("[DeleteAlert] SQLite delete failed: %s", e)
+        messages.error(request, 'Could not delete alert.')
+
     return redirect('alerts')
 
 
@@ -667,61 +603,57 @@ def delete_alert(request, alert_id):
 @login_required
 def analytics_view(request):
     """Analytics dashboard — technical indicators and visualizations."""
-    symbol = request.GET.get('symbol', 'AAPL').upper()
-    # Fresh instances on every request
-    s3_service     = _s3()
-    event_producer = _event_producer()
-
-    # Fetch data
+    symbol     = request.GET.get('symbol', 'AAPL').upper()
     stock_data = api_service.get_stock_quote(symbol)
-    history = api_service.get_stock_history(symbol, days=90)
-    prices = [d['close'] for d in history] if history else []
+    history    = api_service.get_stock_history(symbol, days=90)
+    prices     = [d['close'] for d in history] if history else []
 
-    # Compute analytics
     analytics = {}
     if prices:
-        analytics = indicator_service.compute_indicators(symbol, prices)
-
-    # Store report in S3 (best-effort — never crash the view)
-    if analytics:
         try:
-            s3_service.upload_json_report(analytics, symbol, 'analytics')
+            analytics = indicator_service.compute_indicators(symbol, prices)
         except Exception as e:
-            logger.warning(f"[S3] upload_json_report failed for {symbol}: {e}")
+            logger.warning("[Analytics] compute_indicators failed: %s", e)
 
-    # Request further processing via SQS (best-effort)
-    try:
-        event_producer.send_analytics_request(symbol, 'FULL')
-    except Exception as e:
-        logger.warning(f"[SQS] send_analytics_request failed for {symbol}: {e}")
+    # S3 report (fire-and-forget)
+    if analytics:
+        fire_and_forget(lambda: safe_aws_call(
+            lambda: _s3().upload_json_report(analytics, symbol, 'analytics')
+        ))
 
-    # Prepare chart data
-    chart_labels = [d['date'] for d in history] if history else []
+    # SQS analytics request (fire-and-forget)
+    fire_and_forget(lambda: safe_aws_call(
+        lambda: _event_producer().send_analytics_request(symbol, 'FULL')
+    ))
+
+    chart_labels = [d['date']  for d in history] if history else []
     chart_prices = prices
-
-    # Compute SMA data for chart
     sma_20 = []
     sma_50 = []
+
     if len(prices) >= 20:
-        from stock_event_engine.indicators import StockAnalyzer
-        analyzer = StockAnalyzer(prices, symbol)
-        sma_20_raw = analyzer.moving_average(20)
-        sma_20 = [None] * 19 + [round(float(v), 2) for v in sma_20_raw]
-    if len(prices) >= 50:
-        sma_50_raw = analyzer.moving_average(50)
-        sma_50 = [None] * 49 + [round(float(v), 2) for v in sma_50_raw]
+        try:
+            from stock_event_engine.indicators import StockAnalyzer
+            analyzer    = StockAnalyzer(prices, symbol)
+            sma_20_raw  = analyzer.moving_average(20)
+            sma_20      = [None] * 19 + [round(float(v), 2) for v in sma_20_raw]
+            if len(prices) >= 50:
+                sma_50_raw = analyzer.moving_average(50)
+                sma_50     = [None] * 49 + [round(float(v), 2) for v in sma_50_raw]
+        except Exception as e:
+            logger.warning("[Analytics] StockAnalyzer failed: %s", e)
 
     context = {
-        'symbol': symbol,
-        'stock': stock_data,
-        'analytics': analytics,
-        'indicators': analytics.get('indicators', {}),
-        'signals': analytics.get('signals', {}),
-        'chart_labels': json.dumps(chart_labels),
-        'chart_prices': json.dumps(chart_prices),
-        'chart_sma_20': json.dumps(sma_20),
-        'chart_sma_50': json.dumps(sma_50),
-        'search_form': StockSearchForm(initial={'query': symbol}),
+        'symbol':        symbol,
+        'stock':         stock_data,
+        'analytics':     analytics,
+        'indicators':    analytics.get('indicators', {}),
+        'signals':       analytics.get('signals', {}),
+        'chart_labels':  json.dumps(chart_labels),
+        'chart_prices':  json.dumps(chart_prices),
+        'chart_sma_20':  json.dumps(sma_20),
+        'chart_sma_50':  json.dumps(sma_50),
+        'search_form':   StockSearchForm(initial={'query': symbol}),
     }
     return render(request, 'stocks/analytics.html', context)
 
@@ -734,25 +666,26 @@ def register_view(request):
     """User registration."""
     if request.user.is_authenticated:
         return redirect('dashboard')
-    sns_service        = _sns()
-    cloudwatch_service = _cloudwatch()
 
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            try:
+                user = form.save()
+            except Exception as e:
+                logger.error("[Register] form.save() failed: %s", e)
+                messages.error(request, 'Registration failed. Please try again.')
+                return render(request, 'stocks/register.html', {'form': form})
 
-            # Subscribe to SNS for alerts
-            email = user.email
-            if email:
-                sns_service.subscribe(email)
+            # SNS subscribe — best-effort
+            if user.email:
+                fire_and_forget(lambda: safe_aws_call(
+                    lambda: _sns().subscribe(user.email)
+                ))
 
             login(request, user)
             messages.success(request, 'Account created successfully!')
-
-            safe_aws_call(lambda: cloudwatch_service.log_system_event(
-                'USER_REGISTERED', f"User: {user.username}"
-            ))
+            logger.info("[Auth] User registered: %s", user.username)
             return redirect('dashboard')
     else:
         form = UserRegistrationForm()
@@ -764,33 +697,28 @@ def login_view(request):
     """User login."""
     if request.user.is_authenticated:
         return redirect('dashboard')
-    sns_service        = _sns()
-    cloudwatch_service = _cloudwatch()
 
     if request.method == 'POST':
         username = request.POST.get('username', '')
         password = request.POST.get('password', '')
-        user = authenticate(request, username=username, password=password)
+
+        try:
+            user = authenticate(request, username=username, password=password)
+        except Exception as e:
+            logger.error("[Login] authenticate() failed: %s", e)
+            messages.error(request, 'Login failed. Please try again.')
+            return render(request, 'stocks/login.html')
 
         if user is not None:
             login(request, user)
 
-            # Re-subscribe user's email to SNS on every login.
-            # Handles the case where: (a) the initial subscribe on registration
-            # failed because credentials were expired at that moment, or (b)
-            # the AWS Academy session was refreshed and SNS topic was recreated.
-            # AWS SNS subscribe is idempotent — calling it again on an already-
-            # confirmed subscription does nothing.
-            if user.email and sns_service.available:
-                try:
-                    sns_service.subscribe(user.email)
-                    logger.info(f"SNS subscription refreshed for {user.email}")
-                except Exception as e:
-                    logger.warning(f"SNS re-subscribe failed for {user.email}: {e}")
+            # SNS re-subscribe on every login (idempotent) — fire-and-forget
+            if user.email:
+                fire_and_forget(lambda: safe_aws_call(
+                    lambda: _sns().subscribe(user.email)
+                ))
 
-            safe_aws_call(lambda: cloudwatch_service.log_system_event(
-                'USER_LOGIN', f"User: {username}"
-            ))
+            logger.info("[Auth] User logged in: %s", username)
             next_url = request.GET.get('next', 'dashboard')
             return redirect(next_url)
         else:
@@ -799,18 +727,12 @@ def login_view(request):
     return render(request, 'stocks/login.html')
 
 
-#logout
 @login_required
 def logout_view(request):
     """User logout."""
-    cloudwatch_service = _cloudwatch()
-    try:
-        cloudwatch_service.log_system_event(
-            'USER_LOGOUT', f"User: {request.user.username}"
-        )
-    except Exception:
-        pass
+    username = request.user.username
     logout(request)
+    logger.info("[Auth] User logged out: %s", username)
     messages.info(request, 'You have been logged out.')
     return redirect('dashboard')
 
@@ -818,31 +740,43 @@ def logout_view(request):
 @login_required
 def profile_view(request):
     """User profile management."""
-    profile, _ = UserProfile.objects.get_or_create(
-        user=request.user,
-        defaults={'role': 'user'}
-    )
+    try:
+        profile, _ = UserProfile.objects.get_or_create(
+            user=request.user, defaults={'role': 'user'}
+        )
+    except Exception as e:
+        logger.warning("[Profile] get_or_create UserProfile failed: %s", e)
+        profile = UserProfile(user=request.user, role='user')
 
     if request.method == 'POST':
         form = UserProfileForm(request.POST, instance=profile)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Profile updated successfully.')
+            try:
+                form.save()
+                messages.success(request, 'Profile updated successfully.')
+            except Exception as e:
+                logger.warning("[Profile] save failed: %s", e)
+                messages.error(request, 'Could not save profile.')
             return redirect('profile')
     else:
         form = UserProfileForm(instance=profile)
 
-    # Get user stats
-    watchlist_count = Watchlist.objects.filter(user=request.user).count()
-    alert_count = Alert.objects.filter(user=request.user).count()
-    active_alerts = Alert.objects.filter(user=request.user, status='active').count()
+    watchlist_count = 0
+    alert_count     = 0
+    active_alerts   = 0
+    try:
+        watchlist_count = Watchlist.objects.filter(user=request.user).count()
+        alert_count     = Alert.objects.filter(user=request.user).count()
+        active_alerts   = Alert.objects.filter(user=request.user, status='active').count()
+    except Exception as e:
+        logger.warning("[Profile] stats query failed: %s", e)
 
     context = {
-        'form': form,
-        'profile': profile,
+        'form':            form,
+        'profile':         profile,
         'watchlist_count': watchlist_count,
-        'alert_count': alert_count,
-        'active_alerts': active_alerts,
+        'alert_count':     alert_count,
+        'active_alerts':   active_alerts,
     }
     return render(request, 'stocks/profile.html', context)
 
@@ -853,14 +787,22 @@ def profile_view(request):
 
 def api_stock_quote(request, symbol):
     """JSON API endpoint for stock quote."""
-    data = api_service.get_stock_quote(symbol.upper())
+    try:
+        data = api_service.get_stock_quote(symbol.upper())
+    except Exception as e:
+        logger.warning("[API] get_stock_quote failed: %s", e)
+        data = {'symbol': symbol.upper(), 'error': str(e)}
     return JsonResponse(data)
 
-#stock history
+
 def api_stock_history(request, symbol):
     """JSON API endpoint for historical data."""
-    days = int(request.GET.get('days', 90))
-    history = api_service.get_stock_history(symbol.upper(), days)
+    try:
+        days    = int(request.GET.get('days', 90))
+        history = api_service.get_stock_history(symbol.upper(), days)
+    except Exception as e:
+        logger.warning("[API] get_stock_history failed: %s", e)
+        history = []
     return JsonResponse({'symbol': symbol.upper(), 'history': history})
 
 
@@ -876,10 +818,6 @@ def custom_404(request, exception=None):
 def custom_500(request):
     """
     Friendly 500 page.
-
-    Shown whenever an unhandled exception reaches Django's WSGI layer.
-    Most commonly triggered by expired AWS Academy credentials — the page
-    tells users to refresh the lab and try again.
+    Should be very rarely shown now that all views are exception-safe.
     """
     return render(request, '500.html', status=500)
-

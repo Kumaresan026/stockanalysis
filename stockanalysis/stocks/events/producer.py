@@ -1,18 +1,14 @@
 """
 Event Producer — sends stock events to SQS.
 
-Triggers messages when:
-- Stock data is updated
-- User creates an alert
-- Analytics processing is requested
+All AWS calls are wrapped in try/except and never raise to callers.
+CloudWatch removed — use Django logger only.
 """
 
 import logging
-from typing import Dict, Any
 from datetime import datetime
 
 from stocks.services.sqs_service import SQSService
-from stocks.services.cloudwatch_service import CloudWatchService
 
 logger = logging.getLogger('stocks')
 
@@ -20,141 +16,88 @@ logger = logging.getLogger('stocks')
 class StockEventProducer:
     """
     Produces stock events and sends them to SQS for processing.
-    Part of the event-driven architecture.
+    All methods return True/False — never raise exceptions.
     """
 
-    # Event types
-    STOCK_UPDATE = 'STOCK_UPDATE'
-    ALERT_CREATED = 'ALERT_CREATED'
-    ANALYTICS_REQUEST = 'ANALYTICS_REQUEST'
-    ALERT_EVALUATION = 'ALERT_EVALUATION'
+    STOCK_UPDATE       = 'STOCK_UPDATE'
+    ALERT_CREATED      = 'ALERT_CREATED'
+    ANALYTICS_REQUEST  = 'ANALYTICS_REQUEST'
+    ALERT_EVALUATION   = 'ALERT_EVALUATION'
 
     def __init__(self):
-        # Intentionally empty — AWS service objects are created lazily inside each
-        # method so that constructing StockEventProducer() at import time or view
-        # entry does NOT trigger STS network calls.
-        pass
-
-    # ── Lazy service helpers ──────────────────────────────────────────────────────────
+        pass  # No AWS calls at init — lazy creation per method
 
     def _sqs(self):
-        """Return a fresh SQSService instance (created on demand, never at init)."""
         return SQSService()
-
-    def _cw(self):
-        """Return a fresh CloudWatchService instance (created on demand)."""
-        return CloudWatchService()
 
     def send_stock_update(self, symbol: str, price: float,
                           volume: int = 0,
                           change_percent: float = 0.0) -> bool:
-        """
-        Send a stock update event to SQS.
-
-        This is triggered after new stock data is fetched from the API
-        and stored in DynamoDB.
-
-        Args:
-            symbol: Stock ticker symbol.
-            price: Current price.
-            volume: Trading volume.
-            change_percent: Price change percentage.
-
-        Returns:
-            True if message was sent successfully.
-        """
-        data = {
-            'symbol': symbol.upper(),
-            'price': price,
-            'volume': volume,
-            'change_percent': change_percent,
-        }
-        success = self._sqs().send_message(self.STOCK_UPDATE, data)
-
-        # Log to CloudWatch
-        self._cw().log_sqs_event(
-            self.STOCK_UPDATE, symbol,
-            f"Price: ${price:.2f}, Volume: {volume}"
-        )
-
-        if success:
-            logger.info(f"Stock update event sent for {symbol}")
-        else:
-            logger.error(f"Failed to send stock update event for {symbol}")
-
-        return success
+        """Send a STOCK_UPDATE event to SQS. Returns True on success."""
+        try:
+            success = self._sqs().send_message(self.STOCK_UPDATE, {
+                'symbol':         symbol.upper(),
+                'price':          price,
+                'volume':         volume,
+                'change_percent': change_percent,
+                'timestamp':      datetime.utcnow().isoformat(),
+            })
+            if success:
+                logger.info("[SQS] STOCK_UPDATE sent for %s @ $%.2f", symbol, price)
+            else:
+                logger.warning("[SQS] STOCK_UPDATE failed for %s", symbol)
+            return bool(success)
+        except Exception as e:
+            logger.warning("[SQS] send_stock_update exception for %s: %s", symbol, e)
+            return False
 
     def send_alert_created(self, alert_id: str, user_id: str,
                            symbol: str, condition: str,
                            threshold: float) -> bool:
-        """
-        Send an alert creation event to SQS.
-
-        Args:
-            alert_id: Unique alert ID.
-            user_id: User who created the alert.
-            symbol: Stock symbol.
-            condition: Alert condition type.
-            threshold: Threshold value.
-
-        Returns:
-            True on success.
-        """
-        data = {
-            'alert_id': alert_id,
-            'user_id': user_id,
-            'symbol': symbol.upper(),
-            'condition': condition,
-            'threshold': threshold,
-        }
-        success = self._sqs().send_message(self.ALERT_CREATED, data)
-
-        self._cw().log_sqs_event(
-            self.ALERT_CREATED, symbol,
-            f"Alert: {condition} {threshold}"
-        )
-
-        return success
+        """Send an ALERT_CREATED event to SQS. Returns True on success."""
+        try:
+            success = self._sqs().send_message(self.ALERT_CREATED, {
+                'alert_id':  alert_id,
+                'user_id':   user_id,
+                'symbol':    symbol.upper(),
+                'condition': condition,
+                'threshold': threshold,
+                'timestamp': datetime.utcnow().isoformat(),
+            })
+            if success:
+                logger.info("[SQS] ALERT_CREATED sent for %s %s", symbol, condition)
+            else:
+                logger.warning("[SQS] ALERT_CREATED failed for %s", symbol)
+            return bool(success)
+        except Exception as e:
+            logger.warning("[SQS] send_alert_created exception for %s: %s", symbol, e)
+            return False
 
     def send_analytics_request(self, symbol: str,
                                 analysis_type: str = 'FULL') -> bool:
-        """
-        Request analytics processing for a stock.
+        """Request analytics processing via SQS. Returns True on success."""
+        try:
+            success = self._sqs().send_message(self.ANALYTICS_REQUEST, {
+                'symbol':        symbol.upper(),
+                'analysis_type': analysis_type,
+                'timestamp':     datetime.utcnow().isoformat(),
+            })
+            if success:
+                logger.info("[SQS] ANALYTICS_REQUEST sent for %s", symbol)
+            return bool(success)
+        except Exception as e:
+            logger.warning("[SQS] send_analytics_request exception for %s: %s", symbol, e)
+            return False
 
-        Args:
-            symbol: Stock to analyze.
-            analysis_type: Type of analysis to perform.
-
-        Returns:
-            True on success.
-        """
-        data = {
-            'symbol': symbol.upper(),
-            'analysis_type': analysis_type,
-        }
-        success = self._sqs().send_message(self.ANALYTICS_REQUEST, data)
-
-        self._cw().log_sqs_event(
-            self.ANALYTICS_REQUEST, symbol,
-            f"Analysis type: {analysis_type}"
-        )
-
-        return success
-
-    def send_alert_evaluation(self, symbol: str,
-                               price: float) -> bool:
-        """
-        Request alert evaluation for a stock.
-
-        Args:
-            symbol: Stock symbol to check alerts for.
-            price: Current price to evaluate against.
-
-        Returns:
-            True on success.
-        """
-        data = {
-            'symbol': symbol.upper(),
-            'price': price,
-        }
-        return self._sqs().send_message(self.ALERT_EVALUATION, data)
+    def send_alert_evaluation(self, symbol: str, price: float) -> bool:
+        """Request alert evaluation via SQS. Returns True on success."""
+        try:
+            success = self._sqs().send_message(self.ALERT_EVALUATION, {
+                'symbol':    symbol.upper(),
+                'price':     price,
+                'timestamp': datetime.utcnow().isoformat(),
+            })
+            return bool(success)
+        except Exception as e:
+            logger.warning("[SQS] send_alert_evaluation exception for %s: %s", symbol, e)
+            return False
