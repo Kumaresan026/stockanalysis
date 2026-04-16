@@ -33,10 +33,13 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
       - name: Deploy to Elastic Beanstalk
         run: |
           eb init stockanalysis \
             --region us-east-1 \
-            --platform "Python 3.9"
+            --platform "Python 3.9 running on 64bit Amazon Linux 2023"
           eb use stockanalysis-env
-          eb deploy --timeout 25
+          eb deploy --timeout 20
