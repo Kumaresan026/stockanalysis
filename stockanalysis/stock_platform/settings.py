@@ -7,12 +7,13 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env variables ONLY when they are not already set in the environment.
-# On Elastic Beanstalk, environment properties are injected into os.environ
-# before Python starts, so override=False ensures EB-managed values (including
-# REPLACE_IN_EB_CONSOLE IAM-role placeholders) always win over any stale
-# credentials that may be present in the committed .env file.
-load_dotenv(override=False)
+# Load .env ONLY in local development.
+# On Elastic Beanstalk (ENV=production), all config comes from EB environment
+# properties — never from .env. This guarantees boto3 uses the LabRole instance
+# profile and never picks up stale credentials from .env.
+_IS_EB = os.environ.get('ENV') == 'production'
+if not _IS_EB:
+    load_dotenv(override=False)
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -145,6 +146,12 @@ ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', '')
 FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY', '')
 
 # ─── Logging Configuration ────────────────────────────────────────────
+# On EB: console only (stdout → /var/log/web.stdout.log via EB)
+# Locally: console + file
+_log_handlers = ['console']
+if not _IS_EB:
+    _log_handlers = ['console', 'file']
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -167,13 +174,12 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': _log_handlers,
         'level': 'INFO',
     },
     'loggers': {
         'stocks': {
-            # Both stdout (EB web.stdout.log) and local file
-            'handlers': ['console', 'file'],
+            'handlers': _log_handlers,
             'level': 'DEBUG',
             'propagate': False,
         },
